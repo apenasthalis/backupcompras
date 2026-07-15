@@ -1,0 +1,137 @@
+VERSÃO PRD01 - USADO token CSRF - COMENTADO ABAIXO
+VERSÃO PRODUTO 1.0
+NOME DA PAGINA: jc-criarorc.php
+
+
+Criar uma pagina que tenha os seguintes requisitos:
+
+Ser responsiva.
+HTML, CSS E PHP serão criados no mesmo arquivo.
+Caber em tela unica sem ter que rolar.
+
+CABEÇALHO:
+Cabeçalho será composto por duas faixas fundos verdes.
+
+FAIXA 01, fundo verde '#68BD4F'.
+
+Escrito " EMPRESA: " e $_SESSION[´nomeempresa´], alinhado pela esquerda, letras brancas, padding:25px, font-size:16px.
+Abaixo  "ENDEREÇO: " e $_SESSION[´endempresa´] mesmo css acima.
+Abaixo  " CLIENTE: " e $_SESSION[´nomecliente´] mesmo css acima.
+
+Abaixo  
+FAIXA 02, fundo verde 'green', escrito em branco, "$_SESSION[´sistema´]", centralizado,  padding:5px, font-size:35px, font-weight:550;
+
+CORPO:
+No corpo da pagina, fundo AZUL #f6faf8. TEM 2 QUADROS: QUADRO 01 E QUADRO 02
+
+1. QUADRO 01 COM FUNDO BRANCO, cantos arredondados, BORDAS Cinza, solidom 1px.
+   Esse Quadro terá Largura de 70% da largura da tela. Será Centralizado.
+1.1 Imput do produto - com label sendo: "Produto:", o imput fica na frente do label.
+    Este imput é do tipo select e será digitado as iniciais do nome do produto ou o nome completo do produto.
+ 	
+2.  ABAIXO DO QUADRO 01 COLOQUE O QUADRO 02 ONDE SERÃO INCLUIDOS OS PRODUTOS DO ORÇAMENTO. 
+2.1 Esse Quadro terá Largura de 70% da largura da tela, será centralizado.
+2.2 Esse outro quadro permite mover para cima e para baixo os dados.
+2.3 Nesse QUADRO os campos: Item, Descrição, Marca, Unidade, Qty.
+2.4 Item é numero sequencial automático somente para numerar os itens do orçamento
+2.5 Descrição, Marca, Unidade, Qty aceitam imput/digitação
+
+3.  Abaixo do QUADRO 02, coloque  2 BOTÕES, um ao lado do outro:
+3.1 Um botão de "Concluir", ao lado outro botão "Voltar". 
+3.2 O botão "Concluir" Salva orçamento no banco de dados. O botao "Voltar" volta para menu.php
+
+4. Abaixo dos 2 Botões - No rodape da pagina - ESPAÇO PARA MENSAGENS.
+
+TODA A PAGINA DEVE CABER EM UMA TELA SEM TER QUE ROLAR, OU Seja o orçamento ter 100, 200 linhas ou mais,
+mas só rolará no quadro de rolagem.
+
+
+FORMATAÇÃO, MASCARA E VALIDAÇÃO DOS IMPUTS:
+
+QUADRO 01:
+CAMPO PARA IMPUT Produto: Pega as iniciais do produto - após digiração - a lógica buscará os dados no banco e mostrará uma lista para escolher o produto.
+Mostrará: Descrição, Marca, Unidade.
+Não colocar botão para buscar ou consultar - apenas o enter já é suficiente.
+
+QUADRO 02:
+CAMPOS:  Id, Descrição, Marca, Unidade, Qty.
+Item não aceita imput/digitação, é um numero sequencial automático somente para numerar os itens do orçamento
+Marca, Unidade, Quantidade aceitam imput/digitação.
+Alinhamentos de Qty no imput é pela direita - numério - inteiro.
+
+BOTÕES: Abaixo do Quadro 02 - um ao lado do outro:
+Botão "Concluir", verde, hover laranja - Botão "Voltar", azul. hover laranha. 
+
+Mensagens: Abaixo dos Botões - centralizadas - cor laranja. 
+
+Faça a página de um tamanho que não seja necessário rolar a tela p ler as mensagens.
+Caso aconteça erro não apagar os dados digitados.
+
+LÓGICA E SEGURANÇA:
+inicialize as variáveis:
+$_idempresa = $_SESSION[´idempresa´]
+$_idcliente = $_SESSION[´idcliente´]
+
+1. NO QUADRO 01 o usuário digita o imput com as iniciais do produto que quer orçar.
+	Após esse imput a lógica faz a consulta no banco de dados tabela produtos com limit no SQL de 10;
+	Trás os dados para ser feito a seleção.
+	Caso não retorne nenhum item setar descrição com o que foi digitado, marca com '', e Unidade com ''
+	Passar para o Quadro 02
+ 
+2. Após Seleção do Produto ele é Incluido no Quadro 02 da seguinte forma:
+	id, Descrição, Marca, Unindade são setados com resultado da pesquisa acima.
+	Qty será digitada se não digitada de a mensagem "Digite a Qty ou Delete o Item!!!" 
+
+3. Após a Quantidade ser digitada volta para o QUADRO 01 para se escolher novo produto.
+	Não coloque botão - apenas o enter na quantidade já finaliza o item.
+
+4. SE BOTÃO "Concluir" for acionado e existir itens digitados
+   Grave no banco de Dados:
+     Inclua na Tabela orcamentos os campos (idorc, idempresa, idcliente, dtcri)
+            idorc é sequencial o ultimo da tabela orcamento mais 1;     
+            idempresa vem de $_idempresa;
+            idcliente vem de $_idcliente;
+            dtcri é a data atual;
+
+     Inclua na Tabela itensorc os campos(idorc, descricao, marca, unidade, qty, valor) todos os itens do QUADRO 02
+	    idorc é o numero do orçamento acima
+	    descrição, marca, unidade, qty, valor vem do QUADRO 02
+      
+4. TRÁFEGO DE DADOS criptografado.
+
+5. SQL: 
+	Prepared Statements: Nunca concatene variáveis na consulta SQL.
+	Use PDO com prepared statements ($stmt->execute()) para bloquear 100% de ataques de SQL Injection.
+
+GERENCIAMENTO DE SESSÃO SEGURO:
+Regenerar sessão após login com session_regenerate_id(true).
+
+Configuração do Cookie: Antes de iniciar a sessão, configure os parâmetros do cookie para impedir o roubo de sessões por scripts maliciosos (XSS):
+session_start([
+    'cookie_lifetime' => 0, // Expira quando fechar o navegador
+    'cookie_secure' => true, // Apenas via HTTPS
+    'cookie_httponly' => true, // Bloqueia acesso via JavaScript
+    'cookie_samesite' => 'Lax' // Protege contra CSRF
+]);
+
+USAR token CSRFO
+
+ 
+BANCO DE DADOS 
+NOME DO BANCO DE DADOS: compras
+
+TABELA: produtos 
+ (descricao, marca, unidade);
+
+TABELA: orcamentos
+( idorc, idempresa, idcliente, dtcri)
+
+TABELA: itensorc (idorc, descricao, marca, unidade, qty, valor)   
+
+
+
+
+
+
+
+

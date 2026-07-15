@@ -1,0 +1,68 @@
+PRD01 - MENU
+VERSÃO 1.0
+NOME DA PAGINA: menu.php
+
+Criar uma pagina jc-menu.php que tenha os seguintes requisitos:
+
+SER RESPONSIVA.
+HTML, CSS e PHP serão criados no mesmo arquivo.
+O mínimo de css possivel.
+Mesmo css para todos os botões.
+
+CABEÇALHO:
+O cabeçalho será composto por duas faixas fundos verdes.
+A faixa 01, fundo verde '#68BD4F', escrito em branco, Escrito Nome da Plataforma que vem de $_SESSION[´plataforma´], alinhado pela esquerda, padding:25px, font-size:16px.
+Abaixo escrito o nome do usuário que veio em $_SESSION[´nome´]
+A faixa 02, fundo verde 'green', escrito em branco, Escrito Nome do Sistema que vem de $_SESSION[´sistema´], centralizado,  padding:5px, font-size:35px, font-weight:550;
+
+CORPO:
+No corpo da pagina, fundo AZUL CLARO. 
+DEVERÁ CABER EM UMA UNICA PAGINA SEM A NECESSIDADE DE ROLAR.
+NO CORPO DA PAGINA TERÁ 7 BOTÕES UM ABAIXO DO OUTRO - TODOS CENTRALIZADOS DE MESMO TAMANHO.
+
+BOTÃO 1 - "Dados Cadastrais" 
+BOTÃO 2 - "Criar Orçamentos"
+BOTÃO 3 - "Orçamentos Abertos"
+BOTÃO 4 - "Orçamentos Prontos"
+BOTÃO 5 - "Orçamentos Aprovados"
+BOTÃO 6 - "Orçamentos Entregues"
+BOTÃO 7 - "Voltar"  
+
+Não tem botão de sair.
+
+FORMATAÇÃO, MASCARA E VALIDAÇÃO DOS IMPUTS:
+
+O mínimo de css possivel.
+Mesmo css para todos os botões.
+BOTÕES CENTRALIZADOS, COR VERDE, HOVER LARANJADO, BORDAS ARREDEONDADAS.
+
+Mensagens, centralizadas, font-size 18px, cor laranja - abaixo dos botões.
+
+
+LOGICA:
+
+BOTÃO 1 chama jc-cadastro.php
+BOTÃO 2 chama jc-criarorc.php
+BOTÃO 3 chama jc-orc-abertos.php
+BOTÃO 4 chama jc-orc-prontos.php
+BOTÃO 5 chama jc-orc-aprovados.php
+BOTÃO 6 chama jc-orc-entregues.php
+BOTÃO 7 chama index.php
+
+
+GERENCIAMENTO DE SESSÃO SEGURO:
+
+BLOQUEAR ACESSO SEM LOGIN com $_SESSION[´contad´]
+
+Configuração do Cookie: Antes de iniciar a sessão, configure os parâmetros do cookie para impedir o roubo de sessões por scripts maliciosos (XSS):
+session_start([
+    'cookie_lifetime' => 0, // Expira quando fechar o navegador
+    'cookie_secure' => true, // Apenas via HTTPS
+    'cookie_httponly' => true, // Bloqueia acesso via JavaScript
+    'cookie_samesite' => 'Lax' // Protege contra CSRF
+]);
+
+
+
+
+
