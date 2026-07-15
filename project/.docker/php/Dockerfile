@@ -4,7 +4,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 RUN apt-get update \
  && apt-get install -y libpq-dev git unzip curl libcurl4-openssl-dev \
- && docker-php-ext-install pdo pdo_pgsql curl
+    libonig-dev libxml2-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
+ && docker-php-ext-configure gd --with-freetype --with-jpeg \
+ && docker-php-ext-install pdo pdo_pgsql curl mbstring xml bcmath ctype zip gd fileinfo
 
 RUN pecl install xdebug && docker-php-ext-enable xdebug
 
@@ -18,12 +20,13 @@ RUN { \
         echo "xdebug.log=/tmp/xdebug.log"; \
         echo "xdebug.max_nesting_level=512"; \
     } > /usr/local/etc/php/conf.d/xdebug.ini
-    
+
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
 WORKDIR /var/www/html
 
 COPY . .
-RUN composer install --no-interaction --optimize-autoloader \
+RUN composer install --no-interaction --optimize-autoloader --no-scripts \
  && chown -R www-data:www-data storage bootstrap/cache
 
 COPY .docker/php/entrypoint.sh /usr/local/bin/docker-custom-entrypoint
