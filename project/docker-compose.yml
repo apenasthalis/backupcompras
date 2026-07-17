@@ -3,26 +3,46 @@ services:
     build:
       context: .
       dockerfile: .docker/nginx/Dockerfile
+
+    restart: unless-stopped
+
+    depends_on:
+      - php
+
     volumes:
-      - .:/var/www/html
+      - .:/var/www/html:ro
+      - ./.docker/nginx/ssl:/etc/nginx/ssl:ro
+
     ports:
       - "80:80"
       - "443:443"
+
     networks:
       - internal
+
   php:
     build:
       context: .
       dockerfile: .docker/php/Dockerfile
+
+    restart: unless-stopped
+
     volumes:
       - .:/var/www/html
-    # ports:
-    #   - "9003:9003"
+
+    expose:
+      - "9000"
+
     networks:
       - internal
+
+    # Descomente para utilizar o Xdebug.
+    # ports:
+    #   - "9003:9003"
+    #
     # environment:
-    #   - XDEBUG_MODE=debug
-    #   - XDEBUG_CONFIG=client_host=host.docker.internal client_port=9003
+    #   XDEBUG_MODE: debug
+    #   XDEBUG_CONFIG: client_host=host.docker.internal client_port=9003
 
 networks:
   internal:
