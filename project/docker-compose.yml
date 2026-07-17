@@ -5,13 +5,13 @@ services:
       dockerfile: .docker/nginx/Dockerfile
     restart: unless-stopped
     depends_on:
-      php:
-        condition: service_healthy
+      - php
     volumes:
       - .:/var/www/html
+      - ./.docker/nginx/ssl:/etc/nginx/ssl:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
     networks:
       - internal
 
@@ -26,12 +26,6 @@ services:
       - "9000"
     environment:
       XDEBUG_MODE: "off"
-    healthcheck:
-      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
     networks:
       internal:
         aliases:
