@@ -3,19 +3,15 @@ services:
     build:
       context: .
       dockerfile: .docker/nginx/Dockerfile
-
     restart: unless-stopped
-
     depends_on:
-      - php
-
+      php:
+        condition: service_healthy
     volumes:
       - .:/var/www/html
-
     ports:
       - "80:80"
       - "443:443"
-
     networks:
       - internal
 
@@ -23,17 +19,23 @@ services:
     build:
       context: .
       dockerfile: .docker/php/Dockerfile
-
     restart: unless-stopped
-
     volumes:
       - .:/var/www/html
-
     expose:
       - "9000"
-
     environment:
       XDEBUG_MODE: "off"
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      internal:
+        aliases:
+          - php
 
 networks:
   internal:
