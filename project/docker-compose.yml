@@ -32,15 +32,8 @@ services:
     expose:
       - "9000"
 
-    networks:
-      - internal
-
-    # ports:
-    #   - "9003:9003"
-
-    # environment:
-    #   XDEBUG_MODE: debug
-    #   XDEBUG_CONFIG: client_host=host.docker.internal client_port=9003
+    environment:
+      XDEBUG_MODE: "off"
 
 networks:
   internal:
