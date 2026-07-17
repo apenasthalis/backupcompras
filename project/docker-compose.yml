@@ -8,12 +8,11 @@ services:
       - php
     volumes:
       - .:/var/www/html
-      - ./.docker/nginx/ssl:/etc/nginx/ssl:ro
     ports:
-      - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"
+      - "80:80"
+      - "443:443"
     networks:
-      - internal
+      - app
 
   php:
     build:
@@ -24,13 +23,11 @@ services:
       - .:/var/www/html
     expose:
       - "9000"
-    environment:
-      XDEBUG_MODE: "off"
     networks:
-      internal:
+      app:
         aliases:
           - php
 
 networks:
-  internal:
+  app:
     driver: bridge

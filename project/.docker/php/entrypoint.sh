@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+if [ ! -d "vendor" ]; then
+    composer install --no-interaction --optimize-autoloader --no-scripts
+fi
+
+chown -R www-data:www-data storage bootstrap/cache
 
 exec docker-php-entrypoint "$@"
