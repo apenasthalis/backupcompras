@@ -13,3 +13,11 @@ Route::get('/menu', function () {
 Route::get('/menu-completo', function () {
     return view('jc-menu-completo');
 })->name('menu-completo');
+
+Route::get('/imagens', function () {
+    return view('jc-imagens');
+})->name('imagens');
+
+Route::get('/jc-criarorc', function () {
+    return view('jc-criarorc');
+})->name('criarorc');
