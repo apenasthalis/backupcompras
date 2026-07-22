@@ -136,6 +136,10 @@
         .btn-concluir:hover {
             background-color: orange;
         }
+        .btn-concluir:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
         .btn-voltar {
             padding: 10px 32px;
             background-color: #3b82f6;
@@ -157,29 +161,37 @@
             flex-shrink: 0;
             min-height: 20px;
         }
+        .error-msg {
+            color: #e74c3c;
+        }
+        .success-msg {
+            color: #27ae60;
+        }
         @media (max-width: 768px) {
             .quadro1, .quadro2-wrapper { width: 95%; }
             .faixa2 { font-size: 22px; }
             .faixa1 { padding: 12px; font-size: 13px; }
         }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 12px; max-width: 420px;
+            width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            overflow: hidden; animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { background: #e74c3c; color: white; padding: 16px 24px; font-size: 18px; font-weight: bold; }
+        .modal-body { padding: 24px; font-size: 15px; color: #333; line-height: 1.5; }
+        .modal-footer { padding: 12px 24px; text-align: right; border-top: 1px solid #eee; }
+        .modal-btn { padding: 8px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .modal-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
-
-    @php
-        $produtos = [
-            ['descricao' => 'Parafuso Aço Inox M6', 'marca' => 'Telas', 'unidade' => 'UN'],
-            ['descricao' => 'Porca Sextavada M8', 'marca' => 'Telas', 'unidade' => 'UN'],
-            ['descricao' => 'Arruela Lisa 1/2', 'marca' => 'Ciser', 'unidade' => 'UN'],
-            ['descricao' => 'Chave Inglesa 12"', 'marca' => 'Vonder', 'unidade' => 'UN'],
-            ['descricao' => 'Fita Veda Rosca 18mm', 'marca' => 'Tigre', 'unidade' => 'PC'],
-            ['descricao' => 'Lixa d\'Água #220', 'marca' => 'Norton', 'unidade' => 'UN'],
-            ['descricao' => 'Tinta Esmalte Branco', 'marca' => 'Suvinil', 'unidade' => 'LT'],
-            ['descricao' => 'Disco Corte 4.1/2"', 'marca' => 'Bosch', 'unidade' => 'UN'],
-            ['descricao' => 'Cano PVC 25mm 3m', 'marca' => 'Tigre', 'unidade' => 'UN'],
-            ['descricao' => 'Joelho PVC 25mm', 'marca' => 'Tigre', 'unidade' => 'UN'],
-        ];
-    @endphp
 
     <div class="faixa1">
         EMPRESA: {{ session('nomeempresa', 'EMPRESA PADRÃO LTDA') }}<br>
@@ -193,13 +205,8 @@
     <div class="corpo">
         <div class="quadro1">
             <label for="selectProduto">Produto:</label>
-            <select id="selectProduto" onchange="adicionarItem(this)">
-                <option value="">-- Digite ou selecione o produto --</option>
-                @foreach($produtos as $p)
-                    <option value="{{ $p['descricao'] }}|{{ $p['marca'] }}|{{ $p['unidade'] }}">
-                        {{ $p['descricao'] }} - {{ $p['marca'] }} - {{ $p['unidade'] }}
-                    </option>
-                @endforeach
+            <select id="selectProduto">
+                <option value="">Carregando produtos...</option>
             </select>
         </div>
 
@@ -211,8 +218,8 @@
                         <th style="width:40px;">Item</th>
                         <th>Descrição</th>
                         <th>Marca</th>
-                        <th>Un.</th>
-                        <th style="width:90px;">Qty</th>
+                        <th>Un</th>
+                        <th style="width:90px;">Qtd</th>
                         <th style="width:30px;"></th>
                     </tr>
                 </thead>
@@ -222,7 +229,7 @@
         </div>
 
         <div class="botoes">
-            <button class="btn-concluir" onclick="concluir()">Concluir</button>
+            <button class="btn-concluir" id="btnConcluir" onclick="concluir()">Concluir</button>
             <a href="{{ route('menu') }}" class="btn-voltar">Voltar</a>
         </div>
 
@@ -232,67 +239,113 @@
     <script>
         let itens = [];
         let itemSeq = 0;
+        let products = [];
+
+        function getToken() {
+            return localStorage.getItem('jwt_token');
+        }
+
+        function setMessage(msg, type) {
+            const el = document.getElementById('mensagem');
+            el.textContent = msg;
+            el.className = 'mensagem' + (type === 'error' ? ' error-msg' : type === 'success' ? ' success-msg' : '');
+            if (type === 'error') showModal(msg);
+        }
+
+        async function loadProducts() {
+            const token = getToken();
+            if (!token) {
+                setMessage('Sessão expirada. Faça login novamente.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/products', {
+                    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    setMessage('Erro ao carregar produtos', 'error');
+                    return;
+                }
+                products = await res.json();
+                const select = document.getElementById('selectProduto');
+                select.innerHTML = '<option value="">-- Selecione o produto --</option>';
+                products.forEach(function(p) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                setMessage('Erro de conexão ao carregar produtos', 'error');
+            }
+        }
+
+        document.getElementById('selectProduto').addEventListener('change', function() {
+            if (this.value) {
+                adicionarItem(this.value);
+            }
+        });
 
         document.getElementById('selectProduto').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const val = this.value;
-                if (val) {
-                    const opt = Array.from(this.options).find(o => o.value === val);
-                    if (opt) {
-                        adicionarItem(this);
-                    } else {
-                        adicionarItemManual(val);
-                    }
+                if (this.value && !Array.from(this.options).some(o => o.value === this.value)) {
+                    adicionarItemManual(this.value);
                 }
             }
         });
 
-        function adicionarItem(select) {
-            const val = select.value;
-            if (!val) return;
-            const [descricao, marca, unidade] = val.split('|');
+        function adicionarItem(productId) {
+            const product = products.find(function(p) { return p.id == productId; });
+            if (!product) return;
             itemSeq++;
             itens.push({
                 id: Date.now() + Math.random(),
+                product_id: product.id,
                 item: itemSeq,
-                descricao: descricao,
-                marca: marca,
-                unidade: unidade,
+                description: product.name,
+                brand: '',
+                unit: '',
                 qty: ''
             });
-            select.value = '';
+            document.getElementById('selectProduto').value = '';
             renderizarTabela();
-            document.getElementById('mensagem').textContent = '';
+            setMessage('');
         }
 
         function adicionarItemManual(texto) {
             itemSeq++;
             itens.push({
                 id: Date.now() + Math.random(),
+                product_id: null,
                 item: itemSeq,
-                descricao: texto,
-                marca: '',
-                unidade: '',
+                description: texto,
+                brand: '',
+                unit: '',
                 qty: ''
             });
             document.getElementById('selectProduto').value = '';
             renderizarTabela();
-            document.getElementById('mensagem').textContent = '';
+            setMessage('');
         }
 
         function renderizarTabela() {
             const tbody = document.getElementById('corpoTabela');
             tbody.innerHTML = '';
-            itens.forEach((item, index) => {
+            itens.forEach(function(item, index) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><span class="handle" draggable="true" data-index="${index}">&#9776;</span></td>
                     <td>${item.item}</td>
-                    <td><input type="text" value="${item.descricao}" onchange="itens[${index}].descricao = this.value"></td>
-                    <td><input type="text" value="${item.marca}" onchange="itens[${index}].marca = this.value"></td>
-                    <td><input type="text" value="${item.unidade}" style="width:50px;" onchange="itens[${index}].unidade = this.value"></td>
-                    <td><input type="number" class="qty" value="${item.qty}" min="0" onchange="itens[${index}].qty = this.value; verificarQty(${index})" onkeydown="if(event.key==='Enter'){verificarQty(${index});}"></td>
+                    <td><input type="text" value="${item.description.replace(/"/g, '&quot;')}" onchange="itens[${index}].description = this.value"></td>
+                    <td><input type="text" value="${item.brand.replace(/"/g, '&quot;')}" onchange="itens[${index}].brand = this.value"></td>
+                    <td><input type="text" value="${item.unit}" style="width:50px;" onchange="itens[${index}].unit = this.value"></td>
+                    <td><input type="number" class="qty" value="${item.qty}" min="0" step="0.01" onchange="itens[${index}].qty = this.value; verificarQty(${index})" onkeydown="if(event.key==='Enter'){verificarQty(${index});}"></td>
                     <td><button class="btn-del" onclick="deletarItem(${index})">&times;</button></td>
                 `;
                 tbody.appendChild(tr);
@@ -312,48 +365,122 @@
                     const from = parseInt(e.dataTransfer.getData('text/plain'));
                     const to = index;
                     if (from !== to) {
-                        const [movido] = itens.splice(from, 1);
+                        const movido = itens.splice(from, 1)[0];
                         itens.splice(to, 0, movido);
                         renummerarItens();
                         renderizarTabela();
                     }
                 });
             });
-            setTimeout(() => {
+            setTimeout(function() {
                 const ultimoInput = tbody.querySelector('tr:last-child input.qty');
                 if (ultimoInput) ultimoInput.focus();
             }, 100);
         }
 
         function renummerarItens() {
-            itens.forEach((item, i) => item.item = i + 1);
+            itens.forEach(function(item, i) { item.item = i + 1; });
         }
 
         function deletarItem(index) {
             itens.splice(index, 1);
             renummerarItens();
             renderizarTabela();
-            document.getElementById('mensagem').textContent = '';
+            setMessage('');
         }
 
         function verificarQty(index) {
-            const qty = itens[index].qty;
-            if (qty === '' || parseInt(qty) <= 0) {
-                document.getElementById('mensagem').textContent = 'Digite a Qty ou Delete o Item!!!';
-                return;
+            const qty = parseFloat(itens[index].qty);
+            if (isNaN(qty) || qty <= 0) {
+                setMessage('Quantidade deve ser maior que 0!', 'error');
+                return true;
             }
-            document.getElementById('mensagem').textContent = '';
+            setMessage('');
             document.getElementById('selectProduto').focus();
+            return false;
         }
 
-        function concluir() {
-            const temItem = itens.some(i => i.qty !== '' && parseInt(i.qty) > 0);
-            if (!temItem) {
-                document.getElementById('mensagem').textContent = 'Adicione pelo menos um item com quantidade válida!';
+        async function concluir() {
+            const token = getToken();
+            if (!token) {
+                setMessage('Sessão expirada. Faça login novamente.', 'error');
                 return;
             }
-            document.getElementById('mensagem').textContent = 'Orçamento simulado com sucesso! (modo estático - sem banco de dados)';
+
+            const valid = itens.filter(function(i) {
+                const qty = parseFloat(i.qty);
+                return !isNaN(qty) && qty > 0;
+            });
+
+            if (valid.length === 0) {
+                setMessage('Adicione pelo menos um item com quantidade maior que 0!', 'error');
+                return;
+            }
+
+            document.getElementById('btnConcluir').disabled = true;
+            setMessage('Salvando itens...');
+
+            let errors = 0;
+            for (const item of valid) {
+                try {
+                    const res = await fetch('/api/user-products', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({
+                            product_id: item.product_id || 1,
+                            description: item.description,
+                            brand: item.brand,
+                            unit: item.unit,
+                            quantity: parseFloat(item.qty),
+                        })
+                    });
+                    if (!res.ok) {
+                        errors++;
+                    }
+                } catch (err) {
+                    errors++;
+                }
+            }
+
+            document.getElementById('btnConcluir').disabled = false;
+
+            if (errors === 0) {
+                setMessage(valid.length + ' item(ns) salvo(s) com sucesso!', 'success');
+                itens = [];
+                itemSeq = 0;
+                renderizarTabela();
+            } else {
+                setMessage(errors + ' item(ns) falhou ao salvar', 'error');
+            }
         }
+
+        loadProducts();
+    </script>
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">Erro</div>
+            <div class="modal-body" id="modalMessage"></div>
+            <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">OK</button></div>
+        </div>
+    </div>
+    <script>
+        function showModal(msg) {
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('errorModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('errorModal').classList.remove('active');
+        }
+        document.getElementById('errorModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            event.preventDefault();
+            var msg = 'Erro inesperado. Tente novamente.';
+            if (event.reason) { msg = event.reason.message || event.reason || msg; }
+            showModal('Erro: ' + msg);
+        });
+        window.onerror = function(msg) { showModal('Erro inesperado: ' + msg); return true; };
     </script>
 </body>
 </html>

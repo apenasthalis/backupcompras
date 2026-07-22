@@ -74,6 +74,23 @@
             .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
             .grid img { height: 150px; }
         }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 12px; max-width: 420px;
+            width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            overflow: hidden; animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { background: #e74c3c; color: white; padding: 16px 24px; font-size: 18px; font-weight: bold; }
+        .modal-body { padding: 24px; font-size: 15px; color: #333; line-height: 1.5; }
+        .modal-footer { padding: 12px 24px; text-align: right; border-top: 1px solid #eee; }
+        .modal-btn { padding: 8px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .modal-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
@@ -96,6 +113,32 @@
             }
         }
         gerarImagens();
+    </script>
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">Erro</div>
+            <div class="modal-body" id="modalMessage"></div>
+            <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">OK</button></div>
+        </div>
+    </div>
+    <script>
+        function showModal(msg) {
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('errorModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('errorModal').classList.remove('active');
+        }
+        document.getElementById('errorModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            event.preventDefault();
+            var msg = 'Erro inesperado. Tente novamente.';
+            if (event.reason) { msg = event.reason.message || event.reason || msg; }
+            showModal('Erro: ' + msg);
+        });
+        window.onerror = function(msg) { showModal('Erro inesperado: ' + msg); return true; };
     </script>
 </body>
 </html>

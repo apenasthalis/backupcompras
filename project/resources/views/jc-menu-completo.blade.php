@@ -30,9 +30,24 @@
         .top-bar .usuario {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 12px;
             font-weight: 500;
             color: #334155;
+        }
+        .top-bar .logout-btn {
+            background: none;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 6px 14px;
+            font-size: 13px;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .top-bar .logout-btn:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #dc2626;
         }
         .bottom-bar {
             padding: 28px 32px;
@@ -113,27 +128,41 @@
         .btn-voltar:hover .seta {
             color: #64748b;
         }
-        .mensagem {
-            text-align: center;
-            font-size: 14px;
-            color: #ea580c;
-            margin-top: 16px;
-        }
         @media (max-width: 600px) {
             .top-bar { flex-direction: column; gap: 4px; align-items: flex-start; padding: 12px 20px; }
             .bottom-bar { font-size: 18px; padding: 20px; }
             .corpo { padding: 20px; }
             .btn-menu { width: 100%; padding: 14px 18px; }
         }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 12px; max-width: 420px;
+            width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            overflow: hidden; animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { background: #e74c3c; color: white; padding: 16px 24px; font-size: 18px; font-weight: bold; }
+        .modal-body { padding: 24px; font-size: 15px; color: #333; line-height: 1.5; }
+        .modal-footer { padding: 12px 24px; text-align: right; border-top: 1px solid #eee; }
+        .modal-btn { padding: 8px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .modal-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
     <header>
         <div class="top-bar">
-            <span>{{ session('plataforma') }}</span>
-            <span class="usuario">{{ session('nome') }}</span>
+            <span>{{ auth()->user()->plataforma ?? '' }}</span>
+            <span class="usuario">
+                {{ auth()->user()->name }}
+                <button class="logout-btn" onclick="logout()">Sair</button>
+            </span>
         </div>
-        <div class="bottom-bar">{{ session('sistema') }}</div>
+        <div class="bottom-bar">{{ auth()->user()->sistema ?? 'SISTEMA DE ORÇAMENTOS' }}</div>
     </header>
 
     <div class="corpo">
@@ -167,15 +196,45 @@
             <span class="label">Orçamentos Entregues</span>
             <span class="seta">&#8594;</span>
         </a>
-        <a href="index.php" class="btn-menu btn-voltar">
+        <a href="/login" class="btn-menu btn-voltar">
             <span class="icone">&#8592;</span>
             <span class="label">Voltar</span>
             <span class="seta">&#8594;</span>
         </a>
-
-        @if(session('mensagem'))
-            <div class="mensagem">{{ session('mensagem') }}</div>
-        @endif
     </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            document.cookie = 'jwt_token=; path=/; max-age=0';
+            window.location.href = '/login';
+        }
+    </script>
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">Erro</div>
+            <div class="modal-body" id="modalMessage"></div>
+            <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">OK</button></div>
+        </div>
+    </div>
+    <script>
+        function showModal(msg) {
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('errorModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('errorModal').classList.remove('active');
+        }
+        document.getElementById('errorModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            event.preventDefault();
+            var msg = 'Erro inesperado. Tente novamente.';
+            if (event.reason) { msg = event.reason.message || event.reason || msg; }
+            showModal('Erro: ' + msg);
+        });
+        window.onerror = function(msg) { showModal('Erro inesperado: ' + msg); return true; };
+    </script>
 </body>
 </html>

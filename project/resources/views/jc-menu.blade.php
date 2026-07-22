@@ -19,10 +19,26 @@
             padding: 25px;
             font-size: 16px;
             text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
         .header-faixa1 .nome-usuario {
             font-size: 14px;
             margin-top: 4px;
+        }
+        .header-faixa1 .logout-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .header-faixa1 .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         .header-faixa2 {
             background-color: green;
@@ -35,28 +51,20 @@
         .container {
             flex: 1;
             display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        .lado-esquerdo {
-            flex: 1;
+        .menu-center {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             gap: 10px;
-            padding: 20px;
-            border-right: 2px solid rgba(0,0,0,0.1);
-        }
-        .lado-direito {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            width: 100%;
+            max-width: 400px;
         }
         .btn-menu {
-            width: 320px;
-            max-width: 90%;
+            width: 100%;
             padding: 14px 0;
             background-color: green;
             color: white;
@@ -71,26 +79,6 @@
         .btn-menu:hover {
             background-color: orange;
         }
-        .btn-imagens {
-            width: 320px;
-            max-width: 90%;
-            padding: 40px 0;
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            display: block;
-            transition: transform 0.2s;
-        }
-        .btn-imagens:hover {
-            background-color: orange;
-            transform: scale(1.05);
-        }
         .mensagem {
             text-align: center;
             font-size: 18px;
@@ -99,42 +87,85 @@
         }
         @media (max-width: 768px) {
             .header-faixa2 { font-size: 24px; }
-            .container { flex-direction: column; }
-            .lado-esquerdo { border-right: none; border-bottom: 2px solid rgba(0,0,0,0.1); }
-            .btn-menu { width: 90%; }
-            .btn-imagens { width: 90%; }
+            .btn-menu { width: 100%; }
         }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white; border-radius: 12px; max-width: 420px;
+            width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            overflow: hidden; animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { background: #e74c3c; color: white; padding: 16px 24px; font-size: 18px; font-weight: bold; }
+        .modal-body { padding: 24px; font-size: 15px; color: #333; line-height: 1.5; }
+        .modal-footer { padding: 12px 24px; text-align: right; border-top: 1px solid #eee; }
+        .modal-btn { padding: 8px 24px; background: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .modal-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
     <div class="header-faixa1">
-        {{ session('plataforma') }}
-        <div class="nome-usuario">{{ session('nome') }}</div>
+        <div>
+            <div>{{ auth()->user()->plataforma ?? '' }}</div>
+            <div class="nome-usuario">{{ auth()->user()->name }}</div>
+        </div>
+        <div>
+            <button class="logout-btn" onclick="logout()">Sair</button>
+        </div>
     </div>
     <div class="header-faixa2">
-        {{ session('sistema') }}
+        {{ auth()->user()->sistema ?? 'SISTEMA DE ORÇAMENTOS' }}
     </div>
 
     <div class="container">
-        <div class="lado-esquerdo">
+        <div class="menu-center">
             <a href="jc-cadastro.php" class="btn-menu">Dados Cadastrais</a>
             <a href="{{ route('criarorc') }}" class="btn-menu">Criar Orçamentos</a>
             <a href="jc-orc-abertos.php" class="btn-menu">Orçamentos Abertos</a>
             <a href="jc-orc-prontos.php" class="btn-menu">Orçamentos Prontos</a>
             <a href="jc-orc-aprovados.php" class="btn-menu">Orçamentos Aprovados</a>
             <a href="jc-orc-entregues.php" class="btn-menu">Orçamentos Entregues</a>
-            <a href="index.php" class="btn-menu">Voltar</a>
-
-            <div class="mensagem">
-                @if(session('mensagem'))
-                    {{ session('mensagem') }}
-                @endif
-            </div>
-        </div>
-
-        <div class="lado-direito">
-            <a href="{{ route('imagens') }}" class="btn-imagens">&#128247; Gerar Imagens</a>
+            <a href="/login" class="btn-menu">Voltar</a>
         </div>
     </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            document.cookie = 'jwt_token=; path=/; max-age=0';
+            window.location.href = '/login';
+        }
+    </script>
+    <div id="errorModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">Erro</div>
+            <div class="modal-body" id="modalMessage"></div>
+            <div class="modal-footer"><button class="modal-btn" onclick="closeModal()">OK</button></div>
+        </div>
+    </div>
+    <script>
+        function showModal(msg) {
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('errorModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('errorModal').classList.remove('active');
+        }
+        document.getElementById('errorModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            event.preventDefault();
+            var msg = 'Erro inesperado. Tente novamente.';
+            if (event.reason) { msg = event.reason.message || event.reason || msg; }
+            showModal('Erro: ' + msg);
+        });
+        window.onerror = function(msg) { showModal('Erro inesperado: ' + msg); return true; };
+    </script>
 </body>
 </html>

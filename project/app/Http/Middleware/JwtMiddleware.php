@@ -18,13 +18,19 @@ class JwtMiddleware
         $token = $this->extractToken($request);
 
         if (!$token) {
-            return response()->json(['error' => 'Token not provided'], 401);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['error' => 'Token not provided'], 401);
+            }
+            return redirect('/login');
         }
 
         $user = $this->jwtService->getUserFromToken($token);
 
         if (!$user) {
-            return response()->json(['error' => 'Invalid or expired token'], 401);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['error' => 'Invalid or expired token'], 401);
+            }
+            return redirect('/login');
         }
 
         auth()->setUser($user);
@@ -38,6 +44,14 @@ class JwtMiddleware
 
         if (str_starts_with($header, 'Bearer ')) {
             return substr($header, 7);
+        }
+
+        if ($request->hasCookie('jwt_token')) {
+            return $request->cookie('jwt_token');
+        }
+
+        if ($request->has('token')) {
+            return $request->query('token');
         }
 
         return null;
