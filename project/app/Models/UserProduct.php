@@ -13,6 +13,7 @@ class UserProduct extends Model
     protected $fillable = [
         'product_id',
         'user_id',
+        'orcamento_id',
         'description',
         'brand',
         'unit',
@@ -27,5 +28,10 @@ class UserProduct extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function orcamento(): BelongsTo
+    {
+        return $this->belongsTo(Orcamento::class, 'orcamento_id', 'idorc');
     }
 }

@@ -9,15 +9,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('plataforma')->nullable();
-            $table->string('sistema')->nullable();
+            if (Schema::hasColumn('users', 'google_id')) {
+                $table->dropColumn(['google_id', 'google_avatar', 'google_name']);
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['plataforma', 'sistema']);
+            $table->string('google_id')->nullable()->unique()->after('email');
+            $table->string('google_avatar')->nullable()->after('password');
+            $table->string('google_name')->nullable()->after('google_avatar');
         });
     }
 };

@@ -21,7 +21,7 @@ class JwtMiddleware
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'Token not provided'], 401);
             }
-            return redirect('/login');
+            return redirect()->route('inicio');
         }
 
         $user = $this->jwtService->getUserFromToken($token);
@@ -30,7 +30,7 @@ class JwtMiddleware
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'Invalid or expired token'], 401);
             }
-            return redirect('/login');
+            return redirect()->route('inicio');
         }
 
         auth()->setUser($user);

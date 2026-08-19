@@ -28,6 +28,7 @@ class ProductController extends Controller
         try {
             $data = $this->validateOrThrow($request, [
                 'product_id' => 'required|exists:products,id',
+                'orcamento_id' => 'nullable|exists:orcamentos,idorc',
                 'description' => 'required|string|max:255',
                 'brand' => 'required|string|max:255',
                 'unit' => 'required|string|max:50',
@@ -37,6 +38,7 @@ class ProductController extends Controller
             $userProduct = UserProduct::create([
                 'product_id' => $data['product_id'],
                 'user_id' => $request->user()->id,
+                'orcamento_id' => $data['orcamento_id'] ?? null,
                 'description' => $data['description'],
                 'brand' => $data['brand'],
                 'unit' => $data['unit'],

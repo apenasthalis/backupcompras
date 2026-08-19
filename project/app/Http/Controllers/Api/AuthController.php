@@ -14,7 +14,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
@@ -29,12 +28,19 @@ class AuthController extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:6',
+                'endereco' => 'nullable|string|max:255',
+                'cidade' => 'nullable|string|max:255',
+                'estado' => 'nullable|string|max:255',
             ]);
 
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
+                'contad' => $this->gerarContad(),
+                'endereco' => $data['endereco'] ?? null,
+                'cidade' => $data['cidade'] ?? null,
+                'estado' => $data['estado'] ?? null,
             ]);
 
             try {
@@ -97,80 +103,6 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         return response()->json(['message' => 'Logout realizado com sucesso']);
-    }
-
-    public function googleRedirect(): JsonResponse
-    {
-        try {
-            $url = Socialite::driver('google')
-                ->stateless()
-                ->redirect()
-                ->getTargetUrl();
-
-            return response()->json(['url' => $url]);
-        } catch (Exception $e) {
-            throw new ApiException(
-                'Erro ao conectar com Google. Verifique se as credenciais estão configuradas.',
-                500
-            );
-        }
-    }
-
-    public function googleCallback(Request $request): JsonResponse|\Illuminate\Http\RedirectResponse
-    {
-        try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
-        } catch (Exception $e) {
-            if ($request->expectsJson()) {
-                throw new ApiException('Falha na autenticação com Google: ' . $e->getMessage(), 401);
-            }
-            return redirect('/login?error=google_auth_failed');
-        }
-
-        try {
-            $user = User::where('email', $googleUser->getEmail())->first();
-
-            if (!$user) {
-                $user = User::create([
-                    'name' => $googleUser->getName(),
-                    'email' => $googleUser->getEmail(),
-                    'google_id' => $googleUser->getId(),
-                    'google_avatar' => $googleUser->getAvatar(),
-                    'google_name' => $googleUser->getName(),
-                    'password' => Hash::make(bin2hex(random_bytes(16))),
-                ]);
-
-                try {
-                    Mail::to($user)->send(new WelcomeMail($user));
-                } catch (Exception $e) {
-                }
-            } else {
-                $user->update([
-                    'google_id' => $googleUser->getId(),
-                    'google_avatar' => $googleUser->getAvatar(),
-                    'google_name' => $googleUser->getName(),
-                ]);
-            }
-
-            $token = $this->jwtService->generateToken($user);
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'access_token' => $token,
-                    'token_type' => 'bearer',
-                    'user' => $this->userResponse($user),
-                ]);
-            }
-
-            return redirect("/login?token={$token}");
-        } catch (ApiException $e) {
-            throw $e;
-        } catch (Exception $e) {
-            if ($request->expectsJson()) {
-                throw new ApiException('Erro ao processar login Google: ' . $e->getMessage(), 500);
-            }
-            return redirect('/login?error=google_auth_failed');
-        }
     }
 
     public function forgotPassword(Request $request): JsonResponse
@@ -242,14 +174,17 @@ class AuthController extends Controller
         }
     }
 
+    private function gerarContad(): string
+    {
+        return 'C' . now()->format('YmdHis') . random_int(100, 999);
+    }
+
     private function userResponse(User $user): array
     {
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'google_avatar' => $user->google_avatar,
-            'google_name' => $user->google_name,
         ];
     }
 }

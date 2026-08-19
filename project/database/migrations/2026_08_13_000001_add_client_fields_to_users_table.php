@@ -9,15 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('plataforma')->nullable();
-            $table->string('sistema')->nullable();
+            $table->string('contad')->nullable()->unique()->after('sistema');
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['plataforma', 'sistema']);
+            $table->dropColumn('contad');
         });
     }
 };

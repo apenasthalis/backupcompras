@@ -194,16 +194,21 @@
 <body>
 
     <div class="faixa1">
-        EMPRESA: {{ session('nomeempresa', 'EMPRESA PADRÃO LTDA') }}<br>
-        ENDEREÇO: {{ session('endempresa', 'Rua Exemplo, 123') }}<br>
-        CLIENTE: {{ session('nomecliente', 'CLIENTE PADRÃO') }}
+        EMPRESA: <span id="lblEmpresa">CARREGANDO...</span><br>
+        ENDEREÇO: <span id="lblEndereco">...</span><br>
+        CLIENTE: {{ auth()->user()->name ?? 'CLIENTE PADRÃO' }}
     </div>
     <div class="faixa2">
-        {{ session('sistema', 'SISTEMA DE ORÇAMENTOS') }}
+        {{ auth()->user()->sistema ?? 'SISTEMA DE ORÇAMENTOS' }}
     </div>
 
     <div class="corpo">
         <div class="quadro1">
+            <label for="selectEmpresa">Empresa:</label>
+            <select id="selectEmpresa">
+                <option value="">Carregando empresas...</option>
+            </select>
+            <br><br>
             <label for="selectProduto">Produto:</label>
             <select id="selectProduto">
                 <option value="">Carregando produtos...</option>
@@ -240,6 +245,8 @@
         let itens = [];
         let itemSeq = 0;
         let products = [];
+        let empresas = [];
+        let empresaSelecionada = null;
 
         function getToken() {
             return localStorage.getItem('jwt_token');
@@ -251,6 +258,57 @@
             el.className = 'mensagem' + (type === 'error' ? ' error-msg' : type === 'success' ? ' success-msg' : '');
             if (type === 'error') showModal(msg);
         }
+
+        function atualizarHeaderEmpresa() {
+            const empresa = empresas.find(function(e) { return e.empcontad === empresaSelecionada; });
+            document.getElementById('lblEmpresa').textContent = empresa ? empresa.empnome : '—';
+            document.getElementById('lblEndereco').textContent = empresa
+                ? (empresa.empendereco + (empresa.empcidade ? ', ' + empresa.empcidade : '') + (empresa.empestado ? ' - ' + empresa.empestado : ''))
+                : '—';
+        }
+
+        async function loadEmpresas() {
+            const token = getToken();
+            if (!token) {
+                setMessage('Sessão expirada. Faça login novamente.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/empresas', {
+                    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+                });
+                if (!res.ok) {
+                    if (res.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    setMessage('Erro ao carregar empresas', 'error');
+                    return;
+                }
+                empresas = await res.json();
+                const select = document.getElementById('selectEmpresa');
+                select.innerHTML = '<option value="">-- Selecione a empresa --</option>';
+                empresas.forEach(function(e) {
+                    const opt = document.createElement('option');
+                    opt.value = e.empcontad;
+                    opt.textContent = e.empnome;
+                    select.appendChild(opt);
+                });
+                if (empresas.length > 0) {
+                    select.value = empresas[0].empcontad;
+                    empresaSelecionada = empresas[0].empcontad;
+                    atualizarHeaderEmpresa();
+                }
+            } catch (err) {
+                setMessage('Erro de conexão ao carregar empresas', 'error');
+            }
+        }
+
+        document.getElementById('selectEmpresa').addEventListener('change', function() {
+            empresaSelecionada = this.value || null;
+            atualizarHeaderEmpresa();
+        });
 
         async function loadProducts() {
             const token = getToken();
@@ -418,9 +476,31 @@
             }
 
             document.getElementById('btnConcluir').disabled = true;
-            setMessage('Salvando itens...');
+            setMessage('Salvando orçamento...');
 
             let errors = 0;
+
+            let idorc = null;
+            try {
+                const resOrc = await fetch('/api/orcamentos', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ idempresa: empresaSelecionada })
+                });
+                if (!resOrc.ok) {
+                    errors++;
+                } else {
+                    const orcData = await resOrc.json();
+                    idorc = orcData.orcamento ? orcData.orcamento.idorc : null;
+                }
+            } catch (err) {
+                errors++;
+            }
+
+            if (!errors && idorc === null) {
+                errors++;
+            }
+
             for (const item of valid) {
                 try {
                     const res = await fetch('/api/user-products', {
@@ -428,6 +508,7 @@
                         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', 'Accept': 'application/json' },
                         body: JSON.stringify({
                             product_id: item.product_id || 1,
+                            orcamento_id: idorc,
                             description: item.description,
                             brand: item.brand,
                             unit: item.unit,
@@ -445,15 +526,16 @@
             document.getElementById('btnConcluir').disabled = false;
 
             if (errors === 0) {
-                setMessage(valid.length + ' item(ns) salvo(s) com sucesso!', 'success');
+                setMessage('Orçamento ' + (idorc !== null ? '#' + idorc : '') + ' criado com ' + valid.length + ' item(ns) salvo(s) com sucesso!', 'success');
                 itens = [];
                 itemSeq = 0;
                 renderizarTabela();
             } else {
-                setMessage(errors + ' item(ns) falhou ao salvar', 'error');
+                setMessage(errors + ' erro(s) ao salvar orçamento. Tente novamente.', 'error');
             }
         }
 
+        loadEmpresas();
         loadProducts();
     </script>
     <div id="errorModal" class="modal-overlay">
