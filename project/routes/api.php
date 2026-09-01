@@ -22,6 +22,7 @@ Route::prefix('auth')->group(function () {
 Route::middleware(JwtMiddleware::class)->group(function () {
     Route::get('empresas', [EmpresaController::class, 'index']);
     Route::get('products', [ProductController::class, 'index']);
+    Route::get('products/search', [ProductController::class, 'search']);
     Route::post('user-products', [ProductController::class, 'store']);
     Route::post('orcamentos', [OrcamentoController::class, 'store']);
 });

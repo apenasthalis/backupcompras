@@ -1,0 +1,128 @@
+Criar uma pagina que tenha os seguintes requisitos:
+NOME DA PAGINA: jc-orc-abertos.php
+
+Ser responsiva.
+Usar Estrutura MVC do Laravel 12, porem HTML, CSS serão criados no mesmo arquivo.
+Caber em tela unica sem ter que rolar.
+
+CABEÇALHO:
+Cabeçalho será composto por duas faixas fundos verdes.
+
+FAIXA 01, fundo verde '#68BD4F'- texto alinhado pela esquerda, letras brancas, padding:25px, font-size:16px -
+Escrito $_SESSION[´sistema´] css acima.
+Abaixo  $_SESSION[´nomecliente´] css acima.
+
+Abaixo  
+FAIXA 02, fundo verde 'green', escrito em branco, "ORÇAMENTOS ABERTOS", centralizado,  padding:5px, font-size:35px, font-weight:550;
+
+CORPO:
+No corpo da pagina, fundo AZUL #f6faf8. 
+
+1. UM QUADRO COM FUNDO BRANCO, cantos arredondados, BORDAS Cinza, solidom 1px.
+   Esse Quadro terá Largura de 80% da largura da tela. Será Centralizado. Será um quadro para imputs.
+1.1 Ler banco de dados compras - tabela orcamentos e mostrar todos orçamentos com status "A".
+    Mostra ID do Orçamento, Nome da Empresa, Endereço da Empresa (limite o tamanho em 15 caracteres)
+1.2 Na frente de cada orçamento mostrado um quadrinho de seleção. 
+1.3 Caso algum quadrinho de seleção for marcado, podendo ser marcado mais de um - o botão abaixo Cobrar Orçamento fica ativo.
+    A pagina é inicializada com esse botão desabilitado.
+
+2.  Abaixo do Quadro, coloque  2 botoes, um ao lado do outro:
+2.1 Um botão de "Cobrar Orçamentos", ao lado outro botão "Voltar". 
+2.2 O botao Cobrar Orçamentos Salva no Banco Compras - Tabela orcamentos - Tipo do Status "Orçamento Cobrado" - os orçamentos selecionados.
+    O botao "Voltar" volta para menu.php
+
+3. Se no Quadro de Imputs algum orçamento for selecionado:
+   Salve o status com "E" - Edição e chama a funcionalidade jc-EditarOrc.php 
+
+
+FORMATAÇÃO, MASCARA E VALIDAÇÃO DOS IMPUTS:
+
+TODA A PAGINA DEVE CABER EM UMA TELA SEM TER QUE ROLAR, OU Seja, pode existrir 100, 200 orçamentos Abertos,
+mas só rolará no quadro de rolagem.
+
+CAMPOS DO QUADRO DE IMPUTS:
+ID, EMPRESA, ENDEREÇO
+NA FRENTE DE CADA LINHA UM QUADRADINHO PARA SER MARCADO.
+SE UMA LINHA FOR CLICADA - Salve o status com "E" - Edição e chama a funcionalidade jc-EditarOrc.php 
+
+Faça a página de um tamanho que não seja necessário rolar a tela p ler as mensagens.
+Caso aconteça erro na validação da senha ou algum outro não apagar os dados digitados.
+
+LÓGICA E SEGURANÇA:
+
+Botão "Cobrar Orçamento", Salva no Banco Compras - Tabela orcamentos - Tipo do Status "Orçamento Cobrado". 
+
+Imput se algum orçamento selecionado chama jc-editarorc.php
+
+Validação de Entrada: 
+Prepared Statements: Nunca concatene variáveis na consulta SQL. 
+Use PDO com prepared statements ($stmt->execute()) para bloquear 100% de ataques de SQL Injection.
+
+
+GERENCIAMENTO DE SESSÃO SEGURO:
+Regenerar sessão após login com session_regenerate_id(true).
+
+Configuração do Cookie: Antes de iniciar a sessão, configure os parâmetros do cookie para impedir o roubo de sessões por scripts maliciosos (XSS):
+session_start([
+    'cookie_lifetime' => 0, // Expira quando fechar o navegador
+    'cookie_secure' => true, // Apenas via HTTPS
+    'cookie_httponly' => true, // Bloqueia acesso via JavaScript
+    'cookie_samesite' => 'Lax' // Protege contra CSRF
+]);
+
+USAR token CSRFO
+
+ 
+BANCO DE DADOS 
+NOME DO BANCO DE DADOS: Compras
+TABELA: orcamentos
+( idorc, idempresa, empnome, empendereço, empcidade, empestado, idcliente, clinome, cliendereco, clicidade, cliestado, dtcri, status, tipstatus)
+
+idcliente é o campo contad da TABELA users
+
+TABELA: users
+ (
+  `conta`,
+  `nome`,
+  `email`,
+  `telefone`,
+  `chave`,
+  `senha_hash`,
+  `status` ENUM('pendente', 'ativo', 'bloqueado') DEFAULT 'pendente',
+  `tentativas_falhas`,
+  `bloqueado_ate`,
+  `token_recuperacao`,
+  `token_expira_em`,
+  `criado_em`,
+  `atualizado_em`,
+  `contad`,
+  `endereco`,
+  `cidade`,
+  `estado`
+
+);
+
+idempresa é o campo empcontad da TABELA empresas
+
+TABELA: empresas
+ (
+  `empconta`,
+  `empnome`,
+  `empemail`,
+  `emptelefone`,
+  `empchave`,
+  `empsenha_hash`,
+  `empstatus` ENUM('pendente', 'ativo', 'bloqueado') DEFAULT 'pendente',
+  `emptentativas_falhas`,
+  `empbloqueado_ate`,
+  `emptoken_recuperacao`,
+  `emptoken_expira_em`,
+  `empcriado_em`,
+  `empatualizado_em`,
+  `empcontad`,
+  `empendereco`,
+  `empcidade`,
+  `empestado`
+
+ 
+);

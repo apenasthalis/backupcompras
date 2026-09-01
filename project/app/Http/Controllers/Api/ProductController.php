@@ -23,6 +23,26 @@ class ProductController extends Controller
         }
     }
 
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $term = trim((string) $request->query('q', ''));
+
+            if ($term === '') {
+                return response()->json([]);
+            }
+
+            $products = Product::where('name', 'ilike', '%' . $term . '%')
+                ->orderBy('name')
+                ->limit(20)
+                ->get(['id', 'name']);
+
+            return response()->json($products);
+        } catch (Exception $e) {
+            throw new ApiException('Erro ao pesquisar produtos: ' . $e->getMessage(), 500);
+        }
+    }
+
     public function store(Request $request): JsonResponse
     {
         try {

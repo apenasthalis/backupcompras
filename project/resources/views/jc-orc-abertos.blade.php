@@ -199,42 +199,34 @@
     </div>
 
     <div class="corpo">
-        <form id="formCobrar" method="POST" action="{{ route('orc-abertos.cobrar') }}">
-            @csrf
-            <div class="quadro">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width:40px;"></th>
-                            <th style="width:80px;">ID</th>
-                            <th>EMPRESA</th>
-                            <th>ENDEREÇO</th>
+        <div class="quadro">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:80px;">ID</th>
+                        <th>EMPRESA</th>
+                        <th>ENDEREÇO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($orcamentos as $orcamento)
+                        <tr class="linha" data-id="{{ $orcamento->idorc }}">
+                            <td>{{ $orcamento->idorc }}</td>
+                            <td>{{ $orcamento->empnome ?? '—' }}</td>
+                            <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($orcamentos as $orcamento)
-                            <tr class="linha" data-id="{{ $orcamento->idorc }}">
-                                <td>
-                                    <input type="checkbox" name="orcamentos[]" value="{{ $orcamento->idorc }}">
-                                </td>
-                                <td>{{ $orcamento->idorc }}</td>
-                                <td>{{ $orcamento->empnome ?? '—' }}</td>
-                                <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="vazio">Nenhum orçamento aberto.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="vazio">Nenhum orçamento aberto.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
-            <div class="botoes">
-                <button type="submit" class="btn-cobrar" id="btnCobrar" disabled>Cobrar Orçamentos</button>
-                <a href="{{ route('menu') }}" class="btn-voltar">Voltar</a>
-            </div>
-        </form>
+        <div class="botoes">
+            <a href="{{ route('menu') }}" class="btn-voltar">Voltar</a>
+        </div>
 
         <div class="mensagem {{ session('success') ? 'success' : (session('error') ? 'error' : '') }}" id="mensagem">
             {{ session('success') ?? session('error') ?? '' }}
@@ -242,15 +234,6 @@
     </div>
 
     <script>
-        var btnCobrar = document.getElementById('btnCobrar');
-        var checkboxes = document.querySelectorAll('#formCobrar input[name="orcamentos[]"]');
-
-        checkboxes.forEach(function (cb) {
-            cb.addEventListener('change', function () {
-                btnCobrar.disabled = document.querySelectorAll('#formCobrar input[name="orcamentos[]"]:checked').length === 0;
-            });
-        });
-
         document.querySelectorAll('tr.linha').forEach(function (tr) {
             tr.addEventListener('click', function (e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;

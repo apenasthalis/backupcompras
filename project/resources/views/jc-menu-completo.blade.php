@@ -166,7 +166,7 @@
     </header>
 
     <div class="corpo">
-        <a href="jc-cadastro.php" class="btn-menu">
+        <a href="{{ route('cadastro') }}" class="btn-menu">
             <span class="icone">&#128100;</span>
             <span class="label">Dados Cadastrais</span>
             <span class="seta">&#8594;</span>

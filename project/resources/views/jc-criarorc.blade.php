@@ -62,6 +62,47 @@
             font-size: 14px;
             width: 70%;
         }
+        .produto-search {
+            position: relative;
+            display: inline-block;
+            width: 70%;
+            vertical-align: middle;
+        }
+        .produto-search input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .produto-search input:focus {
+            outline: none;
+            border-color: #68BD4F;
+        }
+        .produto-sugestoes {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .produto-sugestao {
+            padding: 8px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .produto-sugestao:hover,
+        .produto-sugestao.ativa {
+            background: #e8f5e9;
+        }
         .quadro2-wrapper {
             width: 70%;
             flex: 1;
@@ -196,7 +237,8 @@
     <div class="faixa1">
         EMPRESA: <span id="lblEmpresa">CARREGANDO...</span><br>
         ENDEREÇO: <span id="lblEndereco">...</span><br>
-        CLIENTE: {{ auth()->user()->name ?? 'CLIENTE PADRÃO' }}
+        CLIENTE: {{ auth()->user()->name ?? 'CLIENTE PADRÃO' }}<br>
+        ENDEREÇO DE ENTREGA: {{ (auth()->user()->endereco ?? 'Endereço não informado') . (auth()->user()->cidade ? ', ' . auth()->user()->cidade : '') . (auth()->user()->estado ? ' - ' . auth()->user()->estado : '') }}
     </div>
     <div class="faixa2">
         {{ auth()->user()->sistema ?? 'SISTEMA DE ORÇAMENTOS' }}
@@ -209,10 +251,11 @@
                 <option value="">Carregando empresas...</option>
             </select>
             <br><br>
-            <label for="selectProduto">Produto:</label>
-            <select id="selectProduto">
-                <option value="">Carregando produtos...</option>
-            </select>
+            <label for="inputProduto">Produto:</label>
+            <div class="produto-search">
+                <input type="text" id="inputProduto" placeholder="Digite para pesquisar o produto..." autocomplete="off">
+                <div class="produto-sugestoes" id="produtoSugestoes"></div>
+            </div>
         </div>
 
         <div class="quadro2-wrapper">
@@ -244,9 +287,13 @@
     <script>
         let itens = [];
         let itemSeq = 0;
-        let products = [];
         let empresas = [];
         let empresaSelecionada = null;
+        let produtoSearchTimer = null;
+        let sugestoesProdutos = [];
+        let sugestaoAtiva = -1;
+        const inputProduto = document.getElementById('inputProduto');
+        const boxSugestoes = document.getElementById('produtoSugestoes');
 
         function getToken() {
             return localStorage.getItem('jwt_token');
@@ -310,7 +357,7 @@
             atualizarHeaderEmpresa();
         });
 
-        async function loadProducts() {
+        async function buscarProdutos(termo) {
             const token = getToken();
             if (!token) {
                 setMessage('Sessão expirada. Faça login novamente.', 'error');
@@ -318,48 +365,115 @@
             }
 
             try {
-                const res = await fetch('/api/products', {
+                const res = await fetch('/api/products/search?q=' + encodeURIComponent(termo), {
                     headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
                 });
                 if (!res.ok) {
                     if (res.status === 401) {
                         window.location.href = '/login';
-                        return;
                     }
-                    setMessage('Erro ao carregar produtos', 'error');
                     return;
                 }
-                products = await res.json();
-                const select = document.getElementById('selectProduto');
-                select.innerHTML = '<option value="">-- Selecione o produto --</option>';
-                products.forEach(function(p) {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    select.appendChild(opt);
-                });
+                sugestoesProdutos = await res.json();
+                sugestaoAtiva = -1;
+                renderizarSugestoes();
             } catch (err) {
-                setMessage('Erro de conexão ao carregar produtos', 'error');
+                // falha de rede não deve interromper a digitação
             }
         }
 
-        document.getElementById('selectProduto').addEventListener('change', function() {
-            if (this.value) {
-                adicionarItem(this.value);
+        function renderizarSugestoes() {
+            boxSugestoes.innerHTML = '';
+            if (sugestoesProdutos.length === 0) {
+                boxSugestoes.style.display = 'none';
+                return;
             }
+            sugestoesProdutos.forEach(function(p, i) {
+                const div = document.createElement('div');
+                div.className = 'produto-sugestao' + (i === sugestaoAtiva ? ' ativa' : '');
+                div.textContent = p.name;
+                div.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    selecionarSugestao(i);
+                });
+                boxSugestoes.appendChild(div);
+            });
+            boxSugestoes.style.display = 'block';
+        }
+
+        function selecionarSugestao(i) {
+            const product = sugestoesProdutos[i];
+            fecharSugestoes();
+            if (product) adicionarItem(product);
+        }
+
+        function fecharSugestoes() {
+            boxSugestoes.style.display = 'none';
+            boxSugestoes.innerHTML = '';
+            sugestoesProdutos = [];
+            sugestaoAtiva = -1;
+        }
+
+        function dispararBuscaImediata() {
+            clearTimeout(produtoSearchTimer);
+            const termo = inputProduto.value.trim();
+            if (termo) buscarProdutos(termo);
+        }
+
+        inputProduto.addEventListener('input', function() {
+            clearTimeout(produtoSearchTimer);
+            const termo = this.value.trim();
+            if (termo.length === 0) {
+                fecharSugestoes();
+                return;
+            }
+            produtoSearchTimer = setTimeout(function() {
+                buscarProdutos(termo);
+            }, 1500);
         });
 
-        document.getElementById('selectProduto').addEventListener('keydown', function(e) {
+        inputProduto.addEventListener('keydown', function(e) {
+            const aberto = boxSugestoes.style.display === 'block' && sugestoesProdutos.length > 0;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (aberto) {
+                    sugestaoAtiva = (sugestaoAtiva + 1) % sugestoesProdutos.length;
+                    renderizarSugestoes();
+                } else {
+                    dispararBuscaImediata();
+                }
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (aberto) {
+                    sugestaoAtiva = (sugestaoAtiva - 1 + sugestoesProdutos.length) % sugestoesProdutos.length;
+                    renderizarSugestoes();
+                }
+                return;
+            }
             if (e.key === 'Enter') {
                 e.preventDefault();
-                if (this.value && !Array.from(this.options).some(o => o.value === this.value)) {
-                    adicionarItemManual(this.value);
+                if (aberto && sugestaoAtiva >= 0) {
+                    selecionarSugestao(sugestaoAtiva);
+                } else if (aberto) {
+                    selecionarSugestao(0);
+                } else if (this.value.trim()) {
+                    adicionarItemManual(this.value.trim());
                 }
+                return;
+            }
+            if (e.key === 'Escape') {
+                fecharSugestoes();
             }
         });
 
-        function adicionarItem(productId) {
-            const product = products.find(function(p) { return p.id == productId; });
+        inputProduto.addEventListener('blur', function() {
+            setTimeout(fecharSugestoes, 200);
+        });
+
+        function adicionarItem(product) {
             if (!product) return;
             itemSeq++;
             itens.push({
@@ -371,7 +485,7 @@
                 unit: '',
                 qty: ''
             });
-            document.getElementById('selectProduto').value = '';
+            inputProduto.value = '';
             renderizarTabela();
             setMessage('');
         }
@@ -387,7 +501,7 @@
                 unit: '',
                 qty: ''
             });
-            document.getElementById('selectProduto').value = '';
+            inputProduto.value = '';
             renderizarTabela();
             setMessage('');
         }
@@ -454,7 +568,7 @@
                 return true;
             }
             setMessage('');
-            document.getElementById('selectProduto').focus();
+            inputProduto.focus();
             return false;
         }
 
@@ -536,7 +650,6 @@
         }
 
         loadEmpresas();
-        loadProducts();
     </script>
     <div id="errorModal" class="modal-overlay">
         <div class="modal-box">

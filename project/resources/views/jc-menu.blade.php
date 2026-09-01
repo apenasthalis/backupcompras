@@ -124,7 +124,7 @@
 
     <div class="container">
         <div class="menu-center">
-            <a href="jc-cadastro.php" class="btn-menu">Dados Cadastrais</a>
+            <a href="{{ route('cadastro') }}" class="btn-menu">Dados Cadastrais</a>
             <a href="{{ route('criarorc') }}" class="btn-menu">Criar Orçamentos</a>
             <a href="{{ route('orc-abertos') }}" class="btn-menu">Orçamentos Abertos</a>
             <a href="{{ route('orc-prontos') }}" class="btn-menu">Orçamentos Prontos</a>
