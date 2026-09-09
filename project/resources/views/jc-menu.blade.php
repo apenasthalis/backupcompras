@@ -124,6 +124,7 @@
 
     <div class="container">
         <div class="menu-center">
+            <a href="{{ route('euprecisode') }}" class="btn-menu">Escolher Empresa</a>
             <a href="{{ route('cadastro') }}" class="btn-menu">Dados Cadastrais</a>
             <a href="{{ route('criarorc') }}" class="btn-menu">Criar Orçamentos</a>
             <a href="{{ route('orc-abertos') }}" class="btn-menu">Orçamentos Abertos</a>

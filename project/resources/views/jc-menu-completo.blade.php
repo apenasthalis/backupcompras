@@ -171,6 +171,11 @@
             <span class="label">Dados Cadastrais</span>
             <span class="seta">&#8594;</span>
         </a>
+        <a href="{{ route('euprecisode') }}" class="btn-menu">
+            <span class="icone">&#128205;</span>
+            <span class="label">Escolher Empresa</span>
+            <span class="seta">&#8594;</span>
+        </a>
         <a href="jc-criarorc.php" class="btn-menu">
             <span class="icone">&#128221;</span>
             <span class="label">Criar Orçamentos</span>

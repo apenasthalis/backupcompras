@@ -582,7 +582,7 @@
 
       if (token) {
         storeToken(token);
-        window.location.href = '/menu';
+        window.location.href = '/jc-euprecisode';
         return;
       }
 
@@ -618,7 +618,7 @@
         }
 
         storeToken(data.access_token);
-        window.location.href = '/menu';
+        window.location.href = '/jc-euprecisode';
       } catch (err) {
         showError('Erro de conexão. Tente novamente.');
       } finally {
@@ -659,7 +659,7 @@
         }
 
         storeToken(data.access_token);
-        window.location.href = '/menu';
+        window.location.href = '/jc-euprecisode';
       } catch (err) {
         showError('Erro de conexão. Tente novamente.');
       } finally {

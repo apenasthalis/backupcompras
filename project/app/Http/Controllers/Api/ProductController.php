@@ -27,12 +27,19 @@ class ProductController extends Controller
     {
         try {
             $term = trim((string) $request->query('q', ''));
+            $segmentoId = $request->query('segmento_id');
 
             if ($term === '') {
                 return response()->json([]);
             }
 
-            $products = Product::where('name', 'ilike', '%' . $term . '%')
+            $query = Product::where('name', 'ilike', '%' . $term . '%');
+
+            if ($segmentoId) {
+                $query->where('segmento_id', $segmentoId);
+            }
+
+            $products = $query
                 ->orderBy('name')
                 ->limit(20)
                 ->get(['id', 'name']);

@@ -55,12 +55,20 @@
             font-weight: bold;
             margin-right: 8px;
         }
-        .quadro1 select {
-            padding: 6px 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        .quadro1 .empresa-info {
             font-size: 14px;
-            width: 70%;
+            margin-bottom: 10px;
+        }
+        .quadro1 .empresa-info .nome-empresa {
+            font-weight: bold;
+            color: #111;
+        }
+        .quadro1 .trocar-empresa {
+            font-size: 13px;
+            color: #19703a;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 8px;
         }
         .produto-search {
             position: relative;
@@ -246,11 +254,13 @@
 
     <div class="corpo">
         <div class="quadro1">
-            <label for="selectEmpresa">Empresa:</label>
-            <select id="selectEmpresa">
-                <option value="">Carregando empresas...</option>
-            </select>
-            <br><br>
+            <div class="empresa-info">
+                <label>Empresa:</label>
+                <span class="nome-empresa" id="lblNomeEmpresa">CARREGANDO...</span>
+                <span class="trocar-empresa" onclick="trocarEmpresa()">Trocar Empresa</span>
+                <br>
+                <span id="lblEnderecoEmpresa" style="font-size:13px; color:#666;"></span>
+            </div>
             <label for="inputProduto">Produto:</label>
             <div class="produto-search">
                 <input type="text" id="inputProduto" placeholder="Digite para pesquisar o produto..." autocomplete="off">
@@ -312,50 +322,36 @@
             document.getElementById('lblEndereco').textContent = empresa
                 ? (empresa.empendereco + (empresa.empcidade ? ', ' + empresa.empcidade : '') + (empresa.empestado ? ' - ' + empresa.empestado : ''))
                 : '—';
+            document.getElementById('lblNomeEmpresa').textContent = empresa ? empresa.empnome : '—';
+            document.getElementById('lblEnderecoEmpresa').textContent = empresa
+                ? (empresa.empendereco + (empresa.empcidade ? ', ' + empresa.empcidade : '') + (empresa.empestado ? ' - ' + empresa.empestado : ''))
+                : '—';
         }
 
-        async function loadEmpresas() {
-            const token = getToken();
-            if (!token) {
-                setMessage('Sessão expirada. Faça login novamente.', 'error');
+        function getEmpresaSelecionada() {
+            try {
+                const raw = localStorage.getItem('empresa_selecionada');
+                return raw ? JSON.parse(raw) : null;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function trocarEmpresa() {
+            window.location.href = '/jc-euprecisode';
+        }
+
+        function loadEmpresaSelecionada() {
+            const salva = getEmpresaSelecionada();
+            if (!salva || !salva.empcontad) {
+                window.location.href = '/jc-euprecisode';
                 return;
             }
 
-            try {
-                const res = await fetch('/api/empresas', {
-                    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
-                });
-                if (!res.ok) {
-                    if (res.status === 401) {
-                        window.location.href = '/login';
-                        return;
-                    }
-                    setMessage('Erro ao carregar empresas', 'error');
-                    return;
-                }
-                empresas = await res.json();
-                const select = document.getElementById('selectEmpresa');
-                select.innerHTML = '<option value="">-- Selecione a empresa --</option>';
-                empresas.forEach(function(e) {
-                    const opt = document.createElement('option');
-                    opt.value = e.empcontad;
-                    opt.textContent = e.empnome;
-                    select.appendChild(opt);
-                });
-                if (empresas.length > 0) {
-                    select.value = empresas[0].empcontad;
-                    empresaSelecionada = empresas[0].empcontad;
-                    atualizarHeaderEmpresa();
-                }
-            } catch (err) {
-                setMessage('Erro de conexão ao carregar empresas', 'error');
-            }
-        }
-
-        document.getElementById('selectEmpresa').addEventListener('change', function() {
-            empresaSelecionada = this.value || null;
+            empresas = [salva];
+            empresaSelecionada = salva.empcontad;
             atualizarHeaderEmpresa();
-        });
+        }
 
         async function buscarProdutos(termo) {
             const token = getToken();
@@ -364,8 +360,14 @@
                 return;
             }
 
+            const empresa = getEmpresaSelecionada();
+            let url = '/api/products/search?q=' + encodeURIComponent(termo);
+            if (empresa && empresa.segmento_id) {
+                url += '&segmento_id=' + empresa.segmento_id;
+            }
+
             try {
-                const res = await fetch('/api/products/search?q=' + encodeURIComponent(termo), {
+                const res = await fetch(url, {
                     headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
                 });
                 if (!res.ok) {
@@ -649,7 +651,7 @@
             }
         }
 
-        loadEmpresas();
+        loadEmpresaSelecionada();
     </script>
     <div id="errorModal" class="modal-overlay">
         <div class="modal-box">

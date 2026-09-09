@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Empresa extends Model
 {
@@ -26,5 +27,11 @@ class Empresa extends Model
         'empendereco',
         'empcidade',
         'empestado',
+        'segmento_id',
     ];
+
+    public function segmento(): BelongsTo
+    {
+        return $this->belongsTo(Segmento::class);
+    }
 }

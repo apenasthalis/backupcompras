@@ -19,6 +19,10 @@ Route::middleware(JwtMiddleware::class)->group(function () {
         return view('jc-menu');
     })->name('menu');
 
+    Route::get('/jc-euprecisode', function () {
+        return view('jc-euprecisode');
+    })->name('euprecisode');
+
     Route::get('/cadastro', [CadastroController::class, 'index'])->name('cadastro');
     Route::post('/cadastro', [CadastroController::class, 'update'])->name('cadastro.update');
 
