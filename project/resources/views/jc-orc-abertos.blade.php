@@ -100,6 +100,22 @@
             height: 18px;
             cursor: pointer;
         }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-aberto {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .badge-cobrado {
+            background-color: #fff3cd;
+            color: #856404;
+        }
         .botoes {
             display: flex;
             gap: 12px;
@@ -206,6 +222,8 @@
                         <th style="width:80px;">ID</th>
                         <th>EMPRESA</th>
                         <th>ENDEREÇO</th>
+                        <th style="width:100px;">TIPO</th>
+                        <th style="width:130px;">DATA CRIAÇÃO</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -214,10 +232,16 @@
                             <td>{{ $orcamento->idorc }}</td>
                             <td>{{ $orcamento->empnome ?? '—' }}</td>
                             <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
+                            <td>
+                                <span class="badge {{ $orcamento->status === 'C' ? 'badge-cobrado' : 'badge-aberto' }}">
+                                    {{ $orcamento->status === 'C' ? 'Cobrado' : 'Aberto' }}
+                                </span>
+                            </td>
+                            <td>{{ $orcamento->dtcri ? \Carbon\Carbon::parse($orcamento->dtcri)->format('d/m/Y') : '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="vazio">Nenhum orçamento aberto.</td>
+                            <td colspan="5" class="vazio">Nenhum orçamento aberto.</td>
                         </tr>
                     @endforelse
                 </tbody>

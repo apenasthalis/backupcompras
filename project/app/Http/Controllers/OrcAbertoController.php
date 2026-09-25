@@ -15,7 +15,7 @@ class OrcAbertoController extends Controller
     public function index(): View
     {
         $orcamentos = Orcamento::query()
-            ->where('status', 'A')
+            ->whereIn('status', ['A', 'C'])
             ->where('idcliente', $this->currentClientId())
             ->orderBy('idorc')
             ->get();
