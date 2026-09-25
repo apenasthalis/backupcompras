@@ -254,13 +254,6 @@
 
     <div class="corpo">
         <div class="quadro1">
-            <div class="empresa-info">
-                <label>Empresa:</label>
-                <span class="nome-empresa" id="lblNomeEmpresa">CARREGANDO...</span>
-                <span class="trocar-empresa" onclick="trocarEmpresa()">Trocar Empresa</span>
-                <br>
-                <span id="lblEnderecoEmpresa" style="font-size:13px; color:#666;"></span>
-            </div>
             <label for="inputProduto">Produto:</label>
             <div class="produto-search">
                 <input type="text" id="inputProduto" placeholder="Digite para pesquisar o produto..." autocomplete="off">
@@ -288,7 +281,7 @@
 
         <div class="botoes">
             <button class="btn-concluir" id="btnConcluir" onclick="concluir()">Concluir</button>
-            <a href="{{ route('menu') }}" class="btn-voltar">Voltar</a>
+            <a href="{{ route('menu') }}" class="btn-voltar">Menu</a>
         </div>
 
         <div class="mensagem" id="mensagem"></div>
@@ -320,10 +313,6 @@
             const empresa = empresas.find(function(e) { return e.empcontad === empresaSelecionada; });
             document.getElementById('lblEmpresa').textContent = empresa ? empresa.empnome : '—';
             document.getElementById('lblEndereco').textContent = empresa
-                ? (empresa.empendereco + (empresa.empcidade ? ', ' + empresa.empcidade : '') + (empresa.empestado ? ' - ' + empresa.empestado : ''))
-                : '—';
-            document.getElementById('lblNomeEmpresa').textContent = empresa ? empresa.empnome : '—';
-            document.getElementById('lblEnderecoEmpresa').textContent = empresa
                 ? (empresa.empendereco + (empresa.empcidade ? ', ' + empresa.empcidade : '') + (empresa.empestado ? ' - ' + empresa.empestado : ''))
                 : '—';
         }

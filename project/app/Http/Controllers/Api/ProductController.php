@@ -57,7 +57,7 @@ class ProductController extends Controller
                 'product_id' => 'required|exists:products,id',
                 'orcamento_id' => 'nullable|exists:orcamentos,idorc',
                 'description' => 'required|string|max:255',
-                'brand' => 'required|string|max:255',
+                'brand' => 'nullable|string|max:255',
                 'unit' => 'required|string|max:50',
                 'quantity' => 'required|numeric|min:0.01',
             ]);

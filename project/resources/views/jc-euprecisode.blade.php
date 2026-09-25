@@ -304,7 +304,7 @@
 
         function selecionarEmpresa(empresa) {
             localStorage.setItem('empresa_selecionada', JSON.stringify(empresa));
-            window.location.href = '/menu';
+            window.location.href = '/jc-criarorc';
         }
 
         document.getElementById('selectSegmento').addEventListener('change', function () {
