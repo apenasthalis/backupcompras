@@ -111,6 +111,26 @@
             font-weight: bold;
             white-space: nowrap;
         }
+        .botoes {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+            margin-bottom: 6px;
+        }
+        .btn-voltar {
+            padding: 10px 32px;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-voltar:hover {
+            background-color: orange;
+        }
         .mensagem {
             text-align: center;
             font-size: 14px;
@@ -130,6 +150,7 @@
             .faixa2 { font-size: 22px; }
             .faixa1 { padding: 12px; font-size: 13px; }
             .filtro-box select { width: 100%; }
+            .btn-voltar { padding: 10px 18px; font-size: 14px; }
         }
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -172,6 +193,10 @@
 
         <div class="lista-wrapper" id="listaWrapper">
             <div class="empty">Carregando empresas...</div>
+        </div>
+
+        <div class="botoes">
+            <a href="{{ route('menu') }}" class="btn-voltar">Menu</a>
         </div>
 
         <div class="mensagem" id="mensagem"></div>

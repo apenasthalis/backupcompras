@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Empresa;
 use App\Models\Orcamento;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\JwtService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -140,7 +141,88 @@ class OrcAbertoTest extends TestCase
         $this->assertDatabaseHas('orcamentos', [
             'idorc' => $orc->idorc,
             'status' => 'A',
-            'tipstatus' => 'Orçamento Aberto',
+        ]);
+    }
+
+    public function test_clique_na_linha_de_orcamento_cobrado_abre_a_edicao(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'C');
+        $orc->update(['tipstatus' => 'Orçamento Cobrado']);
+
+        $response = $this->post(
+            '/orc-abertos/'.$orc->idorc.'/editar',
+            [],
+            $this->authHeaders($cliente)
+        );
+
+        $response->assertRedirect(route('editar-orc', ['orcamento' => $orc->idorc]));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
+        ]);
+    }
+
+    public function test_pagina_de_edicao_de_orcamento_cobrado_nao_mostra_botao_cobrar(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'C');
+
+        $response = $this->get(
+            '/jc-editarorc/'.$orc->idorc,
+            $this->authHeaders($cliente)
+        );
+
+        $response->assertOk();
+        $response->assertSee('COBRADO');
+        $response->assertDontSee('Cobrar Orçamento');
+    }
+
+    public function test_cobrar_orcamento_ja_cobrado_nao_derruba_a_pagina(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'C');
+
+        $response = $this->post(
+            '/jc-editarorc/'.$orc->idorc.'/cobrar',
+            [],
+            $this->authHeaders($cliente)
+        );
+
+        $response->assertRedirect(route('orc-abertos'));
+        $response->assertSessionHas('error');
+    }
+
+    public function test_salvar_alteracoes_funciona_em_orcamento_cobrado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'C');
+        Product::create(['name' => 'CANETA']);
+
+        $response = $this->post('/jc-editarorc/'.$orc->idorc.'/salvar', [
+            'itens' => [
+                ['description' => 'CANETA', 'brand' => 'BIC', 'unit' => 'UN', 'quantity' => 3],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('editar-orc', ['orcamento' => $orc->idorc]));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('user_products', [
+            'orcamento_id' => $orc->idorc,
+            'description' => 'CANETA',
+            'quantity' => 3,
+        ]);
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
         ]);
     }
 

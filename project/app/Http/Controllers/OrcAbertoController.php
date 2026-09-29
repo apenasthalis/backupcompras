@@ -60,13 +60,8 @@ class OrcAbertoController extends Controller
         $orcamentoModel = Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->where('status', 'A')
+            ->whereIn('status', ['A', 'C'])
             ->firstOrFail();
-
-        $orcamentoModel->update([
-            'status' => 'A',
-            'tipstatus' => 'Orçamento Aberto',
-        ]);
 
         return Redirect::route('editar-orc', ['orcamento' => $orcamentoModel->idorc]);
     }
@@ -88,7 +83,12 @@ class OrcAbertoController extends Controller
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
             ->where('status', 'A')
-            ->firstOrFail();
+            ->first();
+
+        if (!$orcamentoModel) {
+            return Redirect::route('orc-abertos')
+                ->with('error', 'Orçamento #' . $orcamento . ' não está aberto para cobrança.');
+        }
 
         $orcamentoModel->update([
             'status' => 'C',
@@ -104,7 +104,7 @@ class OrcAbertoController extends Controller
         $orcamentoModel = Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->where('status', 'A')
+            ->whereIn('status', ['A', 'C'])
             ->firstOrFail();
 
         $data = $request->validate([

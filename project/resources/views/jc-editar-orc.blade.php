@@ -253,6 +253,7 @@
     </div>
     <div class="faixa2">
         ORÇAMENTO EM EDIÇÃO #{{ $orcamento->idorc }}
+        @if ($orcamento->status === 'C') - COBRADO @endif
     </div>
 
     <div class="corpo">
@@ -283,10 +284,12 @@
 
         <div class="botoes">
             <button class="btn-salvar" id="btnSalvar" onclick="salvar()">Salvar Alterações</button>
-            <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
-                @csrf
-                <button type="submit" class="btn-cobrar">Cobrar Orçamento</button>
-            </form>
+            @if ($orcamento->status === 'A')
+                <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
+                    @csrf
+                    <button type="submit" class="btn-cobrar">Cobrar Orçamento</button>
+                </form>
+            @endif
             <a href="{{ route('orc-abertos') }}" class="btn-voltar">Voltar</a>
         </div>
 
