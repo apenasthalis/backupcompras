@@ -39,7 +39,7 @@ class OrcAbertoController extends Controller
             return Orcamento::query()
                 ->whereIn('idorc', $ids)
                 ->where('idcliente', $this->currentClientId())
-                ->where('status', 'A')
+                ->whereIn('status', ['A', 'C'])
                 ->update([
                     'status' => 'C',
                     'tipstatus' => 'Orçamento Cobrado',
@@ -82,12 +82,12 @@ class OrcAbertoController extends Controller
         $orcamentoModel = Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->where('status', 'A')
+            ->whereIn('status', ['A', 'C'])
             ->first();
 
         if (!$orcamentoModel) {
             return Redirect::route('orc-abertos')
-                ->with('error', 'Orçamento #' . $orcamento . ' não está aberto para cobrança.');
+                ->with('error', 'Orçamento #' . $orcamento . ' não está disponível para cobrança.');
         }
 
         $orcamentoModel->update([

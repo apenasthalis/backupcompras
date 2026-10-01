@@ -18,7 +18,17 @@ class UserProduct extends Model
         'brand',
         'unit',
         'quantity',
+        'preco_lojista',
+        'preco_cliente',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'preco_lojista' => 'decimal:2',
+            'preco_cliente' => 'decimal:2',
+        ];
+    }
 
     public function product(): BelongsTo
     {

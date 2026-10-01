@@ -26,7 +26,34 @@ class Orcamento extends Model
         'dtcri',
         'status',
         'tipstatus',
+        'desconto',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'desconto' => 'decimal:2',
+        ];
+    }
+
+    public function totalLojista(): float
+    {
+        return round((float) $this->itens->sum(
+            fn (UserProduct $item): float => (float) $item->preco_lojista * (float) $item->quantity
+        ), 2);
+    }
+
+    public function totalCliente(): float
+    {
+        return round((float) $this->itens->sum(
+            fn (UserProduct $item): float => (float) $item->preco_cliente * (float) $item->quantity
+        ), 2);
+    }
+
+    public function totalFinal(): float
+    {
+        return round($this->totalCliente() * (1 - ((float) $this->desconto) / 100), 2);
+    }
 
     public function cliente(): BelongsTo
     {

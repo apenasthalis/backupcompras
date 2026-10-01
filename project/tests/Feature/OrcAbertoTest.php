@@ -166,7 +166,7 @@ class OrcAbertoTest extends TestCase
         ]);
     }
 
-    public function test_pagina_de_edicao_de_orcamento_cobrado_nao_mostra_botao_cobrar(): void
+    public function test_pagina_de_edicao_mostra_botao_cobrar_em_orcamento_cobrado(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -179,10 +179,27 @@ class OrcAbertoTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('COBRADO');
-        $response->assertDontSee('Cobrar Orçamento');
+        $response->assertSee('Cobrar Orçamento');
     }
 
-    public function test_cobrar_orcamento_ja_cobrado_nao_derruba_a_pagina(): void
+    public function test_listagem_mostra_botao_cobrar_para_orcamentos_abertos_e_cobrados(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+
+        $orcAberto = $this->makeOrcamento($cliente, $empresa, 'A');
+        $orcCobrado = $this->makeOrcamento($cliente, $empresa, 'C');
+
+        $response = $this->get('/orc-abertos', $this->authHeaders($cliente));
+
+        $response->assertOk();
+        $response->assertSee('AÇÃO');
+        $response->assertSee('>Cobrar</button>', false);
+        $response->assertSee(route('editar-orc.cobrar', ['orcamento' => $orcAberto->idorc]), false);
+        $response->assertSee(route('editar-orc.cobrar', ['orcamento' => $orcCobrado->idorc]), false);
+    }
+
+    public function test_cobrar_orcamento_ja_cobrado_mantem_o_status_cobrado(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -195,7 +212,34 @@ class OrcAbertoTest extends TestCase
         );
 
         $response->assertRedirect(route('orc-abertos'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
+        ]);
+    }
+
+    public function test_cobrar_orcamento_pronto_nao_derruba_a_pagina(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->post(
+            '/jc-editarorc/'.$orc->idorc.'/cobrar',
+            [],
+            $this->authHeaders($cliente)
+        );
+
+        $response->assertRedirect(route('orc-abertos'));
         $response->assertSessionHas('error');
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'P',
+        ]);
     }
 
     public function test_salvar_alteracoes_funciona_em_orcamento_cobrado(): void

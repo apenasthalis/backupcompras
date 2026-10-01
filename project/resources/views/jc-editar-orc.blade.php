@@ -284,7 +284,7 @@
 
         <div class="botoes">
             <button class="btn-salvar" id="btnSalvar" onclick="salvar()">Salvar Alterações</button>
-            @if ($orcamento->status === 'A')
+            @if (in_array($orcamento->status, ['A', 'C'], true))
                 <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
                     @csrf
                     <button type="submit" class="btn-cobrar">Cobrar Orçamento</button>

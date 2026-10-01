@@ -139,6 +139,11 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+        .btn-cobrar-mini {
+            padding: 5px 14px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
         .btn-voltar {
             padding: 10px 32px;
             background-color: #3b82f6;
@@ -224,6 +229,7 @@
                         <th>ENDEREÇO</th>
                         <th style="width:100px;">TIPO</th>
                         <th style="width:130px;">DATA CRIAÇÃO</th>
+                        <th style="width:110px;">AÇÃO</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -238,10 +244,16 @@
                                 </span>
                             </td>
                             <td>{{ $orcamento->dtcri ? \Carbon\Carbon::parse($orcamento->dtcri)->format('d/m/Y') : '—' }}</td>
+                            <td>
+                                <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
+                                    @csrf
+                                    <button type="submit" class="btn-cobrar btn-cobrar-mini">Cobrar</button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="vazio">Nenhum orçamento aberto.</td>
+                            <td colspan="6" class="vazio">Nenhum orçamento aberto.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -260,7 +272,7 @@
     <script>
         document.querySelectorAll('tr.linha').forEach(function (tr) {
             tr.addEventListener('click', function (e) {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.tagName === 'FORM') return;
                 var id = tr.getAttribute('data-id');
                 var form = document.createElement('form');
                 form.method = 'POST';
