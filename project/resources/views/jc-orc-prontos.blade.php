@@ -147,8 +147,7 @@
                         <th style="width:80px;">ID</th>
                         <th>EMPRESA</th>
                         <th>ENDEREÇO</th>
-                        <th style="width:130px;">PREÇO LOJISTA</th>
-                        <th style="width:130px;">PREÇO CLIENTE</th>
+                        <th style="width:130px;">PREÇO</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -160,12 +159,11 @@
                             <td>{{ $orcamento->idorc }}</td>
                             <td>{{ $orcamento->empnome ?? '—' }}</td>
                             <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
-                            <td>R$ {{ number_format($orcamento->totalLojista(), 2, ',', '.') }}</td>
                             <td>R$ {{ number_format($orcamento->totalCliente(), 2, ',', '.') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="vazio">Nenhum orçamento pronto.</td>
+                            <td colspan="5" class="vazio">Nenhum orçamento pronto.</td>
                         </tr>
                     @endforelse
                 </tbody>

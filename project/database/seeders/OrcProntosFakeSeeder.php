@@ -10,22 +10,23 @@ use App\Models\UserProduct;
 use Illuminate\Database\Seeder;
 
 /**
- * Dados estáticos de teste para a tela de Orçamentos Prontos.
- * Pode ser executado quantas vezes quiser: os registros criados por ele
- * são apagados e recriados sempre com os mesmos valores.
+ * Dois orçamentos artificiais (status P) para a tela de Orçamentos Prontos.
+ * Pode ser executado quantas vezes quiser: os registros criados por ele são
+ * apagados e recriados sempre com os mesmos valores.
  *
  * O cliente alvo é o CDEMO por padrão. Para gerar os dados em outra conta
  * (a listagem só mostra orçamentos do cliente logado), informe o contad
  * ou o e-mail do usuário:
  *
- * docker compose exec -e ORC_TESTE_CLIENTE=1thalisgabriel1@gmail.com \
- *     php php artisan db:seed --class=OrcProntosTesteSeeder
+ * ORC_TESTE_CLIENTE=1thalisgabriel1@gmail.com php artisan db:seed --class=OrcProntosFakeSeeder --force
  */
-class OrcProntosTesteSeeder extends Seeder
+class OrcProntosFakeSeeder extends Seeder
 {
     private const CONTAD_CLIENTE = 'CDEMO';
 
-    private const TIPSTATUS = 'Orçamento Pronto (Teste)';
+    private const TIPSTATUS = 'Orçamento Pronto (Fake)';
+
+    private const TIPSTATUS_ANTERIOR = 'Orçamento Pronto (Teste)';
 
     private const MARGEM_CLIENTE = 0.03;
 
@@ -48,24 +49,15 @@ class OrcProntosTesteSeeder extends Seeder
                 ['Torneira PVC 1/2"', 'Deca', 'UN', 15, 47.90],
             ],
         ],
-        [
-            'empcontad' => 'ELETRICA ACREUNA',
-            'desconto' => 5.00,
-            'itens' => [
-                ['Cabo Fio 2.5mm² 100m', 'Prysmian', 'RL', 4, 389.00],
-                ['Disjuntor Monopolar 16A', 'Schneider', 'UN', 20, 28.90],
-                ['Tomada 2P+T 10A', 'Pial', 'UN', 25, 16.50],
-            ],
-        ],
     ];
 
     public function run(): void
     {
         $this->call(EmpresaSeeder::class);
 
-        $cliente = $this->clienteDemo();
+        $this->apagarAnteriores();
 
-        $this->limparAnteriores($cliente);
+        $cliente = $this->clienteAlvo();
 
         foreach (self::ORCAMENTOS as $dados) {
             $orcamento = $this->criarOrcamento($cliente, $this->empresa($dados['empcontad']), $dados['desconto']);
@@ -86,7 +78,7 @@ class OrcProntosTesteSeeder extends Seeder
         }
     }
 
-    private function clienteDemo(): User
+    private function clienteAlvo(): User
     {
         $referencia = getenv('ORC_TESTE_CLIENTE') ?: self::CONTAD_CLIENTE;
 
@@ -120,11 +112,10 @@ class OrcProntosTesteSeeder extends Seeder
             ?? Empresa::where('empstatus', 'ativo')->firstOrFail();
     }
 
-    private function limparAnteriores(User $cliente): void
+    private function apagarAnteriores(): void
     {
         $ids = Orcamento::query()
-            ->where('idcliente', $cliente->contad)
-            ->where('tipstatus', self::TIPSTATUS)
+            ->whereIn('tipstatus', [self::TIPSTATUS, self::TIPSTATUS_ANTERIOR])
             ->pluck('idorc');
 
         if ($ids->isEmpty()) {

@@ -18,6 +18,6 @@ class DatabaseSeeder extends Seeder
         $this->call(EmpresaSeeder::class);
         $this->call(ProductSeeder::class);
         $this->call(OrcamentoSeeder::class);
-        $this->call(OrcProntosTesteSeeder::class);
+        $this->call(OrcProntosFakeSeeder::class);
     }
 }

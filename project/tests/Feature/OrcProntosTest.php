@@ -208,7 +208,7 @@ class OrcProntosTest extends TestCase
         ]);
     }
 
-    public function test_listagem_mostra_preco_lojista_e_preco_cliente_de_cada_orcamento(): void
+    public function test_listagem_mostra_preco_final_de_cada_orcamento(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -220,10 +220,10 @@ class OrcProntosTest extends TestCase
         $response = $this->get('/orc-prontos', $this->authHeaders($cliente));
 
         $response->assertOk();
-        $response->assertSee('PREÇO LOJISTA');
-        $response->assertSee('PREÇO CLIENTE');
-        $response->assertSee('R$ 117,80');
+        $response->assertSee('PREÇO');
         $response->assertSee('R$ 121,34');
+        $response->assertDontSee('PREÇO LOJISTA');
+        $response->assertDontSee('R$ 117,80');
     }
 
     public function test_pagina_de_aprovacao_permite_editar_precos_e_desconto(): void
