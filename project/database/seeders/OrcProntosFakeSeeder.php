@@ -8,21 +8,23 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\UserProduct;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
+use RuntimeException;
 
 /**
- * Dois orçamentos artificiais (status P) para a tela de Orçamentos Prontos.
+ * Dois orçamentos artificiais (status P) para a tela de Orçamentos Prontos,
+ * gerados para os usuários de id 1 e 2. A listagem só mostra orçamentos do
+ * cliente logado, por isso os dois recebem os mesmos dados.
+ *
  * Pode ser executado quantas vezes quiser: os registros criados por ele são
  * apagados e recriados sempre com os mesmos valores.
  *
- * O cliente alvo é o CDEMO por padrão. Para gerar os dados em outra conta
- * (a listagem só mostra orçamentos do cliente logado), informe o contad
- * ou o e-mail do usuário:
- *
- * ORC_TESTE_CLIENTE=1thalisgabriel1@gmail.com php artisan db:seed --class=OrcProntosFakeSeeder --force
+ * Em produção é obrigatório o --force, senão o Laravel cancela o comando:
+ * php artisan db:seed --class=OrcProntosFakeSeeder --force
  */
 class OrcProntosFakeSeeder extends Seeder
 {
-    private const CONTAD_CLIENTE = 'CDEMO';
+    private const CLIENTES_ALVO = [1, 2];
 
     private const TIPSTATUS = 'Orçamento Pronto (Fake)';
 
@@ -57,8 +59,13 @@ class OrcProntosFakeSeeder extends Seeder
 
         $this->apagarAnteriores();
 
-        $cliente = $this->clienteAlvo();
+        foreach ($this->clientesAlvo() as $cliente) {
+            $this->criarOrcamentos($cliente);
+        }
+    }
 
+    private function criarOrcamentos(User $cliente): void
+    {
         foreach (self::ORCAMENTOS as $dados) {
             $orcamento = $this->criarOrcamento($cliente, $this->empresa($dados['empcontad']), $dados['desconto']);
 
@@ -78,32 +85,32 @@ class OrcProntosFakeSeeder extends Seeder
         }
     }
 
-    private function clienteAlvo(): User
+    /**
+     * @return Collection<int, User>
+     */
+    private function clientesAlvo(): Collection
     {
-        $referencia = getenv('ORC_TESTE_CLIENTE') ?: self::CONTAD_CLIENTE;
+        $clientes = User::query()
+            ->whereIn('id', self::CLIENTES_ALVO)
+            ->orderBy('id')
+            ->get();
 
-        $cliente = User::query()
-            ->where('contad', $referencia)
-            ->orWhere('email', $referencia)
-            ->first();
+        $faltando = array_diff(self::CLIENTES_ALVO, $clientes->pluck('id')->all());
 
-        if ($cliente) {
-            return $cliente;
+        if ($faltando) {
+            throw new RuntimeException(
+                'Usuário(s) não encontrado(s) para o seed: '.implode(', ', $faltando).'.'
+            );
         }
 
-        return User::firstOrCreate(
-            ['contad' => self::CONTAD_CLIENTE],
-            [
-                'name' => 'Cliente Demonstração',
-                'email' => 'demo@exemplo.com',
-                'password' => bcrypt('123456'),
-                'plataforma' => 'Plataforma Demo',
-                'sistema' => 'Sistema Demo',
-                'endereco' => 'Rua da Entrega, 200',
-                'cidade' => 'Goiatuba',
-                'estado' => 'GO',
-            ]
-        );
+        foreach ($clientes as $cliente) {
+            if (! $cliente->contad) {
+                $cliente->contad = 'C'.now()->format('YmdHis').random_int(100, 999);
+                $cliente->save();
+            }
+        }
+
+        return $clientes;
     }
 
     private function empresa(string $empcontad): Empresa
