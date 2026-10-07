@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Orcamento;
+use App\Models\Product;
 use App\Models\UserProduct;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +14,18 @@ use Illuminate\View\View;
 
 class OrcProntosController extends Controller
 {
+    private const STATUS_MODIFICADO = 'M';
+
+    private const TIPSTATUS_MODIFICADO = 'Orçamento Modificado';
+
+    private const STATUS_DESCONTO = 'D';
+
+    private const TIPSTATUS_DESCONTO = 'Desconto Solicitado';
+
+    private const STATUS_COBRADO = 'C';
+
+    private const TIPSTATUS_COBRADO = 'Orçamento Cobrado';
+
     public function index(): View
     {
         $orcamentos = Orcamento::query()
@@ -47,46 +60,149 @@ class OrcProntosController extends Controller
         ]);
     }
 
-    public function salvar(int $orcamento, Request $request): RedirectResponse
+    public function avancar(int $orcamento, Request $request): RedirectResponse
     {
-        $orcamentoModel = Orcamento::query()
-            ->where('idorc', $orcamento)
-            ->where('idcliente', $this->currentClientId())
-            ->where('status', 'P')
-            ->firstOrFail();
+        $orcamentoModel = $this->buscarPronto($orcamento);
 
         $data = $request->validate([
-            'desconto' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'itens' => ['nullable', 'array'],
+            'frete' => ['nullable', 'numeric', 'min:0'],
+            'itens' => ['required', 'array', 'min:1'],
             'itens.*.id' => ['nullable', 'integer'],
+            'itens.*.product_id' => ['nullable', 'integer'],
             'itens.*.description' => ['required', 'string', 'max:255'],
             'itens.*.brand' => ['nullable', 'string', 'max:255'],
             'itens.*.unit' => ['nullable', 'string', 'max:50'],
             'itens.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'itens.*.preco_lojista' => ['required', 'numeric', 'min:0'],
-            'itens.*.preco_cliente' => ['required', 'numeric', 'min:0'],
+            'itens.*.preco_cliente' => ['nullable', 'numeric', 'min:0'],
+            'deletar' => ['nullable', 'array'],
+            'deletar.*' => ['integer'],
+            'solicitar_desconto' => ['nullable', 'boolean'],
         ]);
 
-        $orcamentoModel->update(['desconto' => $data['desconto'] ?? 0]);
+        $frete = isset($data['frete']) && $data['frete'] !== ''
+            ? (float) $data['frete']
+            : (float) $orcamentoModel->frete;
+        $descontoSolicitado = (bool) ($data['solicitar_desconto'] ?? false);
 
-        DB::transaction(function () use ($orcamentoModel, $data): void {
-            foreach ($data['itens'] ?? [] as $item) {
+        $quantidadesAtuais = $orcamentoModel->itens()->pluck('quantity', 'id');
+        $usuario = auth()->user();
+
+        $itemIncluido = false;
+        $quantidadeAumentada = false;
+
+        DB::transaction(function () use ($orcamentoModel, $data, $quantidadesAtuais, $usuario, &$itemIncluido, &$quantidadeAumentada): void {
+            if (!empty($data['deletar'])) {
                 UserProduct::query()
-                    ->where('id', $item['id'] ?? 0)
                     ->where('orcamento_id', $orcamentoModel->idorc)
-                    ->update([
+                    ->whereIn('id', $data['deletar'])
+                    ->delete();
+            }
+
+            foreach ($data['itens'] as $item) {
+                $quantidade = (float) $item['quantity'];
+
+                if (empty($item['id'])) {
+                    $productId = isset($item['product_id']) && $item['product_id'] !== ''
+                        ? (int) $item['product_id']
+                        : null;
+
+                    UserProduct::create([
+                        'product_id' => $this->productIdParaItem($productId, $item['description']),
+                        'user_id' => $usuario->id,
+                        'orcamento_id' => $orcamentoModel->idorc,
                         'description' => $item['description'],
                         'brand' => $item['brand'] ?? '',
                         'unit' => $item['unit'] ?? '',
-                        'quantity' => $item['quantity'],
-                        'preco_lojista' => $item['preco_lojista'],
-                        'preco_cliente' => $item['preco_cliente'],
+                        'quantity' => $quantidade,
+                        'preco_cliente' => $item['preco_cliente'] ?? 0,
+                    ]);
+
+                    $itemIncluido = true;
+
+                    continue;
+                }
+
+                if (!$quantidadesAtuais->has($item['id'])) {
+                    continue;
+                }
+
+                if ($quantidade > (float) $quantidadesAtuais[$item['id']]) {
+                    $quantidadeAumentada = true;
+                }
+
+                UserProduct::query()
+                    ->where('id', $item['id'])
+                    ->where('orcamento_id', $orcamentoModel->idorc)
+                    ->update([
+                        'quantity' => $quantidade,
                     ]);
             }
         });
 
-        return Redirect::route('orc-prontos.aprovar', ['orcamento' => $orcamentoModel->idorc])
-            ->with('success', 'Orçamento atualizado com sucesso.');
+        $orcamentoModel->update([
+            'frete' => $frete,
+            'solicita_desconto' => $descontoSolicitado,
+        ]);
+
+        if ($itemIncluido || $quantidadeAumentada) {
+            $orcamentoModel->update([
+                'status' => self::STATUS_MODIFICADO,
+                'tipstatus' => self::TIPSTATUS_MODIFICADO,
+            ]);
+
+            $aviso = $descontoSolicitado
+                ? ' O lojista também verá a sua solicitação de desconto.'
+                : '';
+
+            return Redirect::route('orc-prontos')
+                ->with('success', 'Orçamento #'.$orcamentoModel->idorc.' enviado como modificado. Aguarde a análise da empresa.'.$aviso);
+        }
+
+        if ($descontoSolicitado) {
+            $orcamentoModel->update([
+                'status' => self::STATUS_DESCONTO,
+                'tipstatus' => self::TIPSTATUS_DESCONTO,
+            ]);
+
+            return Redirect::route('orc-prontos')
+                ->with('success', 'Orçamento #'.$orcamentoModel->idorc.' enviado com solicitação de desconto. Aguarde a análise da empresa.');
+        }
+
+        $orcamentoModel->update([
+            'status' => self::STATUS_COBRADO,
+            'tipstatus' => self::TIPSTATUS_COBRADO,
+        ]);
+
+        return Redirect::route('orc-abertos')
+            ->with('success', 'Orçamento #'.$orcamentoModel->idorc.' aprovado e enviado para cobrança.');
+    }
+
+    private function productIdParaItem(?int $productId, string $descricao): int
+    {
+        if ($productId) {
+            $existente = Product::query()->whereKey($productId)->value('id');
+
+            if ($existente) {
+                return (int) $existente;
+            }
+        }
+
+        $existente = Product::query()->where('name', $descricao)->value('id');
+
+        if ($existente) {
+            return (int) $existente;
+        }
+
+        return (int) Product::create(['name' => $descricao])->id;
+    }
+
+    private function buscarPronto(int $orcamento): Orcamento
+    {
+        return Orcamento::query()
+            ->where('idorc', $orcamento)
+            ->where('idcliente', $this->currentClientId())
+            ->where('status', 'P')
+            ->firstOrFail();
     }
 
     private function currentClientId(): string

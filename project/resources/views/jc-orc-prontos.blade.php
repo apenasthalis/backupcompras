@@ -82,11 +82,6 @@
         .quadro tr.linha:hover {
             background: #f0fdf4;
         }
-        .quadro tr.linha input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
         .botoes {
             display: flex;
             gap: 12px;
@@ -142,28 +137,24 @@
         <div class="quadro">
             <table>
                 <thead>
-                    <tr>
-                        <th style="width:40px;"></th>
-                        <th style="width:80px;">ID</th>
-                        <th>EMPRESA</th>
-                        <th>ENDEREÇO</th>
-                        <th style="width:130px;">PREÇO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($orcamentos as $orcamento)
-                        <tr class="linha" data-id="{{ $orcamento->idorc }}">
-                            <td>
-                                <input type="checkbox" value="{{ $orcamento->idorc }}">
-                            </td>
-                            <td>{{ $orcamento->idorc }}</td>
+<tr>
+                            <th style="width:80px;">ID</th>
+                            <th>EMPRESA</th>
+                            <th>ENDEREÇO</th>
+                            <th style="width:130px;">PREÇO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($orcamentos as $orcamento)
+                            <tr class="linha" data-id="{{ $orcamento->idorc }}">
+                                <td>{{ $orcamento->idorc }}</td>
                             <td>{{ $orcamento->empnome ?? '—' }}</td>
                             <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
                             <td>R$ {{ number_format($orcamento->totalCliente(), 2, ',', '.') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="vazio">Nenhum orçamento pronto.</td>
+                            <td colspan="4" class="vazio">Nenhum orçamento pronto.</td>
                         </tr>
                     @endforelse
                 </tbody>

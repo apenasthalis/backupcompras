@@ -27,13 +27,38 @@ class Orcamento extends Model
         'status',
         'tipstatus',
         'desconto',
+        'frete',
+        'solicita_desconto',
     ];
 
     protected function casts(): array
     {
         return [
             'desconto' => 'decimal:2',
+            'frete' => 'decimal:2',
+            'solicita_desconto' => 'boolean',
         ];
+    }
+
+    public function rotuloStatus(): string
+    {
+        return match ($this->status) {
+            'C' => 'Cobrado',
+            'M' => 'Modificado',
+            'D' => 'Desconto Solicitado',
+            'P' => 'Pronto',
+            default => 'Aberto',
+        };
+    }
+
+    public function classeStatus(): string
+    {
+        return match ($this->status) {
+            'C' => 'badge-cobrado',
+            'M' => 'badge-modificado',
+            'D' => 'badge-desconto',
+            default => 'badge-aberto',
+        };
     }
 
     public function totalLojista(): float
@@ -52,7 +77,10 @@ class Orcamento extends Model
 
     public function totalFinal(): float
     {
-        return round($this->totalCliente() * (1 - ((float) $this->desconto) / 100), 2);
+        return round(
+            $this->totalCliente() * (1 - ((float) $this->desconto) / 100) + (float) $this->frete,
+            2
+        );
     }
 
     public function cliente(): BelongsTo

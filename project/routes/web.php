@@ -47,5 +47,5 @@ Route::middleware(JwtMiddleware::class)->group(function () {
 
     Route::get('/orc-prontos', [OrcProntosController::class, 'index'])->name('orc-prontos');
     Route::get('/orc-prontos/{orcamento}/aprovar', [OrcProntosController::class, 'aprovar'])->name('orc-prontos.aprovar');
-    Route::post('/orc-prontos/{orcamento}/salvar', [OrcProntosController::class, 'salvar'])->name('orc-prontos.salvar');
+    Route::post('/orc-prontos/{orcamento}/avancar', [OrcProntosController::class, 'avancar'])->name('orc-prontos.avancar');
 });

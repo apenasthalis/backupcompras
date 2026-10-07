@@ -253,7 +253,8 @@
     </div>
     <div class="faixa2">
         ORÇAMENTO EM EDIÇÃO #{{ $orcamento->idorc }}
-        @if ($orcamento->status === 'C') - COBRADO @endif
+        @if ($orcamento->status !== 'A') - {{ strtoupper($orcamento->rotuloStatus()) }} @endif
+        @if ($orcamento->solicita_desconto) <span style="font-size:16px;">(SOLICITOU DESCONTO)</span> @endif
     </div>
 
     <div class="corpo">

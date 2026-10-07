@@ -116,6 +116,21 @@
             background-color: #fff3cd;
             color: #856404;
         }
+        .badge-modificado {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-desconto {
+            background-color: #ede9fe;
+            color: #5b21b6;
+        }
+        .tag-desconto {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #b45309;
+        }
         .botoes {
             display: flex;
             gap: 12px;
@@ -239,16 +254,23 @@
                             <td>{{ $orcamento->empnome ?? '—' }}</td>
                             <td>{{ Str::limit($orcamento->empendereco ?? '', 15) }}</td>
                             <td>
-                                <span class="badge {{ $orcamento->status === 'C' ? 'badge-cobrado' : 'badge-aberto' }}">
-                                    {{ $orcamento->status === 'C' ? 'Cobrado' : 'Aberto' }}
+                                <span class="badge {{ $orcamento->classeStatus() }}">
+                                    {{ $orcamento->rotuloStatus() }}
                                 </span>
+                                @if ($orcamento->solicita_desconto)
+                                    <span class="tag-desconto">Solicitou desconto</span>
+                                @endif
                             </td>
                             <td>{{ $orcamento->dtcri ? \Carbon\Carbon::parse($orcamento->dtcri)->format('d/m/Y') : '—' }}</td>
                             <td>
-                                <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
-                                    @csrf
-                                    <button type="submit" class="btn-cobrar btn-cobrar-mini">Cobrar</button>
-                                </form>
+                                @if (in_array($orcamento->status, ['A', 'C'], true))
+                                    <form method="POST" action="{{ route('editar-orc.cobrar', ['orcamento' => $orcamento->idorc]) }}" style="display:inline;">
+                                        @csrf
+                                        <button type="submit" class="btn-cobrar btn-cobrar-mini">Cobrar</button>
+                                    </form>
+                                @else
+                                    <span class="tag-desconto" style="color:#666;">Aguardando empresa</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

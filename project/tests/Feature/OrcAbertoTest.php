@@ -270,6 +270,98 @@ class OrcAbertoTest extends TestCase
         ]);
     }
 
+    public function test_listagem_mostra_todas_as_modalidades_de_orcamento_aberto(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+
+        $orcAberto = $this->makeOrcamento($cliente, $empresa, 'A');
+        $orcCobrado = $this->makeOrcamento($cliente, $empresa, 'C');
+        $orcModificado = $this->makeOrcamento($cliente, $empresa, 'M');
+        $orcDesconto = $this->makeOrcamento($cliente, $empresa, 'D');
+        $orcPronto = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->get('/orc-abertos', $this->authHeaders($cliente));
+
+        $response->assertOk();
+        $response->assertSee('>'.$orcAberto->idorc.'</td>', false);
+        $response->assertSee('>'.$orcCobrado->idorc.'</td>', false);
+        $response->assertSee('>'.$orcModificado->idorc.'</td>', false);
+        $response->assertSee('>'.$orcDesconto->idorc.'</td>', false);
+        $response->assertDontSee('>'.$orcPronto->idorc.'</td>', false);
+        $response->assertSee('Aberto');
+        $response->assertSee('Cobrado');
+        $response->assertSee('Modificado');
+        $response->assertSee('Desconto Solicitado');
+    }
+
+    public function test_listagem_avisa_quando_o_cliente_solicitou_desconto(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+
+        $orcModificado = $this->makeOrcamento($cliente, $empresa, 'M');
+        $orcModificado->update(['solicita_desconto' => true]);
+        $this->makeOrcamento($cliente, $empresa, 'M');
+
+        $response = $this->get('/orc-abertos', $this->authHeaders($cliente));
+
+        $response->assertOk();
+        $response->assertSee('Solicitou desconto');
+    }
+
+    public function test_listagem_nao_oferece_cobrar_para_orcamento_modificado_ou_com_desconto_solicitado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+
+        $orcModificado = $this->makeOrcamento($cliente, $empresa, 'M');
+        $orcDesconto = $this->makeOrcamento($cliente, $empresa, 'D');
+
+        $response = $this->get('/orc-abertos', $this->authHeaders($cliente));
+
+        $response->assertOk();
+        $response->assertDontSee(route('editar-orc.cobrar', ['orcamento' => $orcModificado->idorc]), false);
+        $response->assertDontSee(route('editar-orc.cobrar', ['orcamento' => $orcDesconto->idorc]), false);
+        $response->assertSee('Aguardando empresa');
+    }
+
+    public function test_orcamento_modificado_continua_editavel(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'M');
+
+        $response = $this->post('/orc-abertos/'.$orc->idorc.'/editar', [], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('editar-orc', ['orcamento' => $orc->idorc]));
+
+        $this->get('/jc-editarorc/'.$orc->idorc, $this->authHeaders($cliente))
+            ->assertOk()
+            ->assertSee('MODIFICADO');
+    }
+
+    public function test_cobrar_orcamento_modificado_nao_derruba_a_pagina(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'M');
+
+        $response = $this->post(
+            '/jc-editarorc/'.$orc->idorc.'/cobrar',
+            [],
+            $this->authHeaders($cliente)
+        );
+
+        $response->assertRedirect(route('orc-abertos'));
+        $response->assertSessionHas('error');
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'M',
+        ]);
+    }
+
     public function test_rota_exige_autenticacao(): void
     {
         $response = $this->get('/orc-abertos');

@@ -107,6 +107,18 @@ class OrcProntosTest extends TestCase
         $response->assertDontSee('>'.$deOutro->idorc.'</td>', false);
     }
 
+    public function test_listagem_de_prontos_nao_mostra_quadrinho_de_selecao(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->get('/orc-prontos', $this->authHeaders($cliente));
+
+        $response->assertOk();
+        $response->assertDontSee('type="checkbox"', false);
+    }
+
     public function test_aprovar_mostra_orcamento_e_seus_itens(): void
     {
         $cliente = $this->makeUser('C1');
@@ -120,7 +132,7 @@ class OrcProntosTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('APROVAR ORÇAMENTO');
         $response->assertSee('Cimento 50kg');
-        $response->assertSee('>'.$orc->idorc.'</td>', false);
+        $response->assertSee('APROVAR ORÇAMENTO Nº '.$orc->idorc);
     }
 
     public function test_api_cria_orcamento_pronto_com_dados_do_cliente(): void
@@ -226,7 +238,7 @@ class OrcProntosTest extends TestCase
         $response->assertDontSee('R$ 117,80');
     }
 
-    public function test_pagina_de_aprovacao_permite_editar_precos_e_desconto(): void
+    public function test_pagina_de_aprovacao_mostra_preco_unit_total_desconto_frete_e_botoes(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -237,15 +249,29 @@ class OrcProntosTest extends TestCase
         $response = $this->get('/orc-prontos/'.$orc->idorc.'/aprovar', $this->authHeaders($cliente));
 
         $response->assertOk();
-        $response->assertSee('PREÇO LOJISTA');
-        $response->assertSee('PREÇO CLIENTE');
+        $response->assertSee('PREÇO UNIT');
+        $response->assertSee('PREÇO TOTAL');
         $response->assertSee('Desconto (%)');
-        $response->assertSee('preco_lojista]" value="48.90"', false);
-        $response->assertSee('preco_cliente]" value="50.37"', false);
-        $response->assertSee('value="'.$item->id.'"', false);
+        $response->assertSee('Solicitar Mais desconto');
+        $response->assertSee('name="solicitar_desconto"', false);
+        $response->assertSee('readonly', false);
+        $response->assertDontSee('name="desconto"', false);
+        $response->assertSee('Frete:');
+        $response->assertSee('Adicionar produto:');
+        $response->assertSee('>Avançar<', false);
+        $response->assertSee('>Voltar<', false);
+        $response->assertDontSee('Salvar Alterações');
+        $response->assertSee('EMPRESA: '.$empresa->empnome);
+        $response->assertSee('CLIENTE: '.$cliente->name);
+        $response->assertSee('APROVAR ORÇAMENTO Nº '.$orc->idorc);
+        $response->assertSee('"id":'.$item->id, false);
+        $response->assertDontSee('PREÇO LOJISTA');
+        $response->assertDontSee('PREÇO CLIENTE');
+        $response->assertSee('"preco":"50.37"', false);
+        $response->assertSee('"qty":"2"', false);
     }
 
-    public function test_salvar_atualiza_precos_desconto_e_itens(): void
+    public function test_avancar_sem_alteracao_manda_para_cobranca(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -253,54 +279,29 @@ class OrcProntosTest extends TestCase
 
         $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
 
-        $response = $this->post('/orc-prontos/'.$orc->idorc.'/salvar', [
-            'desconto' => 10,
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
             'itens' => [
                 [
                     'id' => $item->id,
-                    'description' => 'Cimento CP-II 50kg',
-                    'brand' => 'Votorantim',
-                    'unit' => 'SC',
-                    'quantity' => 4,
-                    'preco_lojista' => 100.00,
-                    'preco_cliente' => 103.00,
+                    'description' => 'Cimento 50kg',
+                    'brand' => 'Marca',
+                    'unit' => 'UN',
+                    'quantity' => 2,
                 ],
             ],
         ], $this->authHeaders($cliente));
 
-        $response->assertRedirect(route('orc-prontos.aprovar', ['orcamento' => $orc->idorc]));
+        $response->assertRedirect(route('orc-abertos'));
         $response->assertSessionHas('success');
-
-        $this->assertDatabaseHas('user_products', [
-            'id' => $item->id,
-            'description' => 'Cimento CP-II 50kg',
-            'brand' => 'Votorantim',
-            'quantity' => 4,
-            'preco_lojista' => 100.00,
-            'preco_cliente' => 103.00,
-        ]);
 
         $this->assertDatabaseHas('orcamentos', [
             'idorc' => $orc->idorc,
-            'desconto' => 10,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
         ]);
     }
 
-    public function test_salvar_rejeita_desconto_acima_de_cem_por_cento(): void
-    {
-        $cliente = $this->makeUser('C1');
-        $empresa = $this->makeEmpresa('E1');
-        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
-
-        $response = $this->post('/orc-prontos/'.$orc->idorc.'/salvar', [
-            'desconto' => 150,
-        ], $this->authHeaders($cliente));
-
-        $response->assertSessionHasErrors('desconto');
-        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'desconto' => 0]);
-    }
-
-    public function test_salvar_exige_precos_em_cada_item(): void
+    public function test_avancar_com_item_incluido_marca_status_modificado(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -308,7 +309,143 @@ class OrcProntosTest extends TestCase
 
         $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
 
-        $response = $this->post('/orc-prontos/'.$orc->idorc.'/salvar', [
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 2,
+                ],
+                [
+                    'description' => 'Areia Media',
+                    'brand' => 'Marca',
+                    'unit' => 'SC',
+                    'quantity' => 3,
+                    'preco_cliente' => 12.50,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('orc-prontos'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'M',
+            'tipstatus' => 'Orçamento Modificado',
+        ]);
+
+        $this->assertDatabaseHas('user_products', [
+            'orcamento_id' => $orc->idorc,
+            'description' => 'Areia Media',
+            'unit' => 'SC',
+            'quantity' => 3,
+            'preco_cliente' => 12.50,
+        ]);
+    }
+
+    public function test_avancar_com_quantidade_aumentada_marca_status_modificado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 5,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('user_products', [
+            'id' => $item->id,
+            'quantity' => 5,
+        ]);
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'M',
+            'tipstatus' => 'Orçamento Modificado',
+        ]);
+    }
+
+    public function test_avancar_com_quantidade_reduzida_nao_marca_modificado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 1,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('user_products', [
+            'id' => $item->id,
+            'quantity' => 1,
+        ]);
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
+        ]);
+    }
+
+    public function test_avancar_apagando_item_nao_marca_modificado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+        $remover = $this->makeProductFor($cliente, 'Areia Media', $orc, 10.00, 10.30);
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 2,
+                ],
+            ],
+            'deletar' => [$remover->id],
+        ], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('orc-abertos'));
+
+        $this->assertDatabaseMissing('user_products', ['id' => $remover->id]);
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
+        ]);
+    }
+
+    public function test_avancar_com_o_quadrinho_marcado_marca_desconto_solicitado(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'solicitar_desconto' => 1,
+            'frete' => 25.50,
             'itens' => [
                 [
                     'id' => $item->id,
@@ -318,11 +455,261 @@ class OrcProntosTest extends TestCase
             ],
         ], $this->authHeaders($cliente));
 
-        $response->assertSessionHasErrors('itens.0.preco_lojista');
-        $response->assertSessionHasErrors('itens.0.preco_cliente');
+        $response->assertRedirect(route('orc-prontos'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'D',
+            'tipstatus' => 'Desconto Solicitado',
+            'frete' => 25.50,
+        ]);
     }
 
-    public function test_salvar_nao_altera_item_de_outro_orcamento(): void
+    public function test_avancar_sem_marcar_o_quadrinho_manda_para_cobranca(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+        $orc->update(['desconto' => 10]);
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 2,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('orc-abertos'));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'tipstatus' => 'Orçamento Cobrado',
+            'desconto' => 10,
+        ]);
+    }
+
+    public function test_avancar_nao_altera_o_desconto_ja_concedido(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+        $orc->update(['desconto' => 10]);
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'desconto' => 80,
+            'solicitar_desconto' => 1,
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 2,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'D',
+            'desconto' => 10,
+        ]);
+    }
+
+    public function test_avancar_com_item_novo_tem_precedencia_sobre_o_desconto(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'solicitar_desconto' => 1,
+            'itens' => [
+                [
+                    'description' => 'Tijolo Baiano',
+                    'quantity' => 10,
+                    'preco_cliente' => 1.29,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'M',
+            'tipstatus' => 'Orçamento Modificado',
+        ]);
+    }
+
+    public function test_avancar_modificado_grava_que_o_cliente_solicitou_desconto(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'solicitar_desconto' => 1,
+            'itens' => [
+                [
+                    'description' => 'Tijolo Baiano',
+                    'quantity' => 10,
+                    'preco_cliente' => 1.29,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'M',
+            'tipstatus' => 'Orçamento Modificado',
+            'solicita_desconto' => true,
+        ]);
+    }
+
+    public function test_avancar_sem_o_quadrinho_grava_solicitacao_de_desconto_falso(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'Cimento 50kg',
+                    'quantity' => 2,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('orcamentos', [
+            'idorc' => $orc->idorc,
+            'status' => 'C',
+            'solicita_desconto' => false,
+        ]);
+    }
+
+    public function test_avancar_com_item_digitado_manualmente_cria_o_produto(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'product_id' => '',
+                    'description' => 'Tijolo Baiano',
+                    'quantity' => 10,
+                    'preco_cliente' => 1.29,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertRedirect(route('orc-prontos'));
+
+        $produto = Product::query()->where('name', 'Tijolo Baiano')->first();
+
+        $this->assertNotNull($produto);
+        $this->assertDatabaseHas('user_products', [
+            'orcamento_id' => $orc->idorc,
+            'product_id' => $produto->id,
+            'description' => 'Tijolo Baiano',
+            'preco_cliente' => 1.29,
+        ]);
+    }
+
+    public function test_avancar_nao_altera_preco_cliente_nos_itens_ja_existentes(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                    'description' => 'HACK',
+                    'brand' => 'HACK',
+                    'unit' => 'HACK',
+                    'quantity' => 3,
+                    'preco_cliente' => 2.00,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $this->assertDatabaseHas('user_products', [
+            'id' => $item->id,
+            'description' => 'Cimento 50kg',
+            'brand' => 'Marca',
+            'unit' => 'UN',
+            'quantity' => 3,
+            'preco_cliente' => 50.37,
+        ]);
+    }
+
+    public function test_avancar_rejeita_frete_negativo(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'frete' => -10,
+            'itens' => [
+                ['description' => 'Cimento 50kg', 'quantity' => 2],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertSessionHasErrors('frete');
+        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'status' => 'P']);
+    }
+
+    public function test_avancar_exige_pelo_menos_um_item(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [],
+        ], $this->authHeaders($cliente));
+
+        $response->assertSessionHasErrors('itens');
+        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'status' => 'P']);
+    }
+
+    public function test_avancar_exige_quantidade_em_cada_item(): void
+    {
+        $cliente = $this->makeUser('C1');
+        $empresa = $this->makeEmpresa('E1');
+        $orc = $this->makeOrcamento($cliente, $empresa, 'P');
+
+        $item = $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 48.90, 50.37);
+
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'itens' => [
+                [
+                    'id' => $item->id,
+                ],
+            ],
+        ], $this->authHeaders($cliente));
+
+        $response->assertSessionHasErrors('itens.0.quantity');
+        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'status' => 'P']);
+    }
+
+    public function test_avancar_nao_altera_item_de_outro_orcamento(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
@@ -331,46 +718,47 @@ class OrcProntosTest extends TestCase
 
         $itemDoOutro = $this->makeProductFor($cliente, 'Tijolo', $outro, 1.25, 1.29);
 
-        $this->post('/orc-prontos/'.$orc->idorc.'/salvar', [
+        $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
             'itens' => [
                 [
                     'id' => $itemDoOutro->id,
-                    'description' => 'HACK',
-                    'quantity' => 1,
-                    'preco_lojista' => 0.01,
-                    'preco_cliente' => 0.01,
+                    'description' => 'Tijolo',
+                    'quantity' => 9,
                 ],
             ],
         ], $this->authHeaders($cliente));
 
         $this->assertDatabaseHas('user_products', [
             'id' => $itemDoOutro->id,
-            'description' => 'Tijolo',
+            'quantity' => 2,
             'preco_lojista' => 1.25,
         ]);
     }
 
-    public function test_salvar_recusa_orcamento_de_outro_cliente(): void
+    public function test_avancar_recusa_orcamento_de_outro_cliente(): void
     {
         $cliente = $this->makeUser('C1');
         $outro = $this->makeUser('C2');
         $empresa = $this->makeEmpresa('E1');
         $orc = $this->makeOrcamento($outro, $empresa, 'P');
 
-        $response = $this->post('/orc-prontos/'.$orc->idorc.'/salvar', [
-            'desconto' => 5,
+        $response = $this->post('/orc-prontos/'.$orc->idorc.'/avancar', [
+            'solicitar_desconto' => 1,
+            'itens' => [
+                ['description' => 'Cimento 50kg', 'quantity' => 2],
+            ],
         ], $this->authHeaders($cliente));
 
         $response->assertNotFound();
-        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'desconto' => 0]);
+        $this->assertDatabaseHas('orcamentos', ['idorc' => $orc->idorc, 'desconto' => 0, 'status' => 'P']);
     }
 
-    public function test_totais_aplicam_o_desconto_do_orcamento(): void
+    public function test_totais_aplicam_o_desconto_e_somam_o_frete(): void
     {
         $cliente = $this->makeUser('C1');
         $empresa = $this->makeEmpresa('E1');
         $orc = $this->makeOrcamento($cliente, $empresa, 'P');
-        $orc->update(['desconto' => 10]);
+        $orc->update(['desconto' => 10, 'frete' => 30.00]);
 
         $this->makeProductFor($cliente, 'Cimento 50kg', $orc, 100.00, 103.00);
 
@@ -378,7 +766,7 @@ class OrcProntosTest extends TestCase
 
         $this->assertEquals(200.00, $orc->totalLojista());
         $this->assertEquals(206.00, $orc->totalCliente());
-        $this->assertEquals(185.40, $orc->totalFinal());
+        $this->assertEquals(215.40, $orc->totalFinal());
     }
 
     public function test_rota_exige_autenticacao(): void

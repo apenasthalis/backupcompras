@@ -12,10 +12,12 @@ use Illuminate\View\View;
 
 class OrcAbertoController extends Controller
 {
+    private const STATUS_ABERTOS = ['A', 'C', 'M', 'D'];
+
     public function index(): View
     {
         $orcamentos = Orcamento::query()
-            ->whereIn('status', ['A', 'C'])
+            ->whereIn('status', self::STATUS_ABERTOS)
             ->where('idcliente', $this->currentClientId())
             ->orderBy('idorc')
             ->get();
@@ -60,7 +62,7 @@ class OrcAbertoController extends Controller
         $orcamentoModel = Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->whereIn('status', ['A', 'C'])
+            ->whereIn('status', self::STATUS_ABERTOS)
             ->firstOrFail();
 
         return Redirect::route('editar-orc', ['orcamento' => $orcamentoModel->idorc]);
@@ -104,7 +106,7 @@ class OrcAbertoController extends Controller
         $orcamentoModel = Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->whereIn('status', ['A', 'C'])
+            ->whereIn('status', self::STATUS_ABERTOS)
             ->firstOrFail();
 
         $data = $request->validate([
