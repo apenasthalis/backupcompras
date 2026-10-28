@@ -175,7 +175,7 @@
             tr.addEventListener('click', function (e) {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'A') return;
                 var id = tr.getAttribute('data-id');
-                window.location.href = "{{ url('/orc-prontos') }}/" + id + "/aprovar";
+                window.location.href = "{{ url('/orc-prontos', [], true) }}/" + id + "/aprovar";
             });
         });
     </script>

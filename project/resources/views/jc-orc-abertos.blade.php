@@ -298,7 +298,7 @@
                 var id = tr.getAttribute('data-id');
                 var form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url('/orc-abertos') }}/" + id + "/editar";
+                form.action = "{{ url('/orc-abertos', [], true) }}/" + id + "/editar";
                 var token = document.createElement('input');
                 token.type = 'hidden';
                 token.name = '_token';
