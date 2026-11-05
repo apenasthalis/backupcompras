@@ -324,6 +324,8 @@
     </div>
     <div class="faixa2">
         APROVAR ORÇAMENTO Nº {{ $orcamento->idorc }}
+        @if ($orcamento->status !== 'P') - {{ strtoupper($orcamento->rotuloStatus()) }} @endif
+        @if ($orcamento->solicita_desconto) <span style="font-size:16px;">(SOLICITOU DESCONTO)</span> @endif
     </div>
 
     <form method="POST" action="{{ route('orc-prontos.avancar', ['orcamento' => $orcamento->idorc]) }}" class="aprovacao" id="formAvancar">

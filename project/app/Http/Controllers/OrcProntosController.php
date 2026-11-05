@@ -47,7 +47,7 @@ class OrcProntosController extends Controller
             ->with('itens')
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->where('status', 'P')
+            ->whereIn('status', ['P', 'M', 'D'])
             ->first();
 
         if (!$orcamentoModel) {
@@ -201,7 +201,7 @@ class OrcProntosController extends Controller
         return Orcamento::query()
             ->where('idorc', $orcamento)
             ->where('idcliente', $this->currentClientId())
-            ->where('status', 'P')
+            ->whereIn('status', ['P', 'M', 'D'])
             ->firstOrFail();
     }
 

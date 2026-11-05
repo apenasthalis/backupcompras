@@ -334,9 +334,9 @@ class OrcAbertoTest extends TestCase
 
         $response = $this->post('/orc-abertos/'.$orc->idorc.'/editar', [], $this->authHeaders($cliente));
 
-        $response->assertRedirect(route('editar-orc', ['orcamento' => $orc->idorc]));
+        $response->assertRedirect(route('orc-prontos.aprovar', ['orcamento' => $orc->idorc]));
 
-        $this->get('/jc-editarorc/'.$orc->idorc, $this->authHeaders($cliente))
+        $this->get('/orc-prontos/'.$orc->idorc.'/aprovar', $this->authHeaders($cliente))
             ->assertOk()
             ->assertSee('MODIFICADO');
     }

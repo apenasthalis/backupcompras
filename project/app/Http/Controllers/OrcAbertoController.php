@@ -65,7 +65,11 @@ class OrcAbertoController extends Controller
             ->whereIn('status', self::STATUS_ABERTOS)
             ->firstOrFail();
 
-        return Redirect::route('editar-orc', ['orcamento' => $orcamentoModel->idorc]);
+        if (in_array($orcamentoModel->status, ['A', 'C'], true)) {
+            return Redirect::route('editar-orc', ['orcamento' => $orcamentoModel->idorc]);
+        }
+
+        return Redirect::route('orc-prontos.aprovar', ['orcamento' => $orcamentoModel->idorc]);
     }
 
     public function editarPagina(int $orcamento): View
